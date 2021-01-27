@@ -1,4 +1,4 @@
-# PorosityAnalisys
+# Estimating Porosity of Carbonate Rocks Through Hyperspectral Data and Machine Learning
 This repository provides the code, data and the results used to estimate the porosity through spectral data. 
 
 # Table of contents 
