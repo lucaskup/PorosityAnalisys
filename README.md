@@ -14,8 +14,7 @@ This repository provides the code, data and the results used to estimate the por
     tensorflow=='2.1.0'
     pandas
     numpy
-
-scikit-learn`
+    scikit-learn
 
 ## Usage
 The Jupyter Notebook has the code necessary to simulate the results reported on the folder results
