@@ -12,9 +12,13 @@ This repository provides the code, data and the results used to estimate the por
 ## Requirements
 
 keras=='2.3.1'
+
 tensorflow=='2.1.0'
+
 pandas
+
 numpy
+
 scikit-learn
 
 ## Usage
