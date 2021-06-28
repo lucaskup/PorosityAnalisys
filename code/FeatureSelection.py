@@ -6,11 +6,14 @@ import numpy as np
 import re
 
 
-def plotCorrelationMatrix(df, annot=True):
+def plotCorrelationMatrix(df, annot=True, fileName=None):
     f, ax = plt.subplots(figsize=(10, 8))
     corr = df.corr()
-    sns.heatmap(corr, mask=np.zeros_like(corr, dtype=np.bool), cmap=sns.diverging_palette(220, 10, as_cmap=True),
+    sns.heatmap(corr, mask=np.zeros_like(corr, dtype=np.bool),
+                cmap=sns.diverging_palette(220, 10, as_cmap=True),
                 square=True, ax=ax, annot=annot)
+    if fileName is not None:
+        plt.savefig(fileName, dpi=400)
 
 
 dataset = pd.read_csv(f'../data/data.csv',
@@ -46,22 +49,36 @@ for i in range(DIVISIONS_IN_SPECTRA):
     # print(lowerCut,upperCut,columnsInDataset[lowerCut:upperCut])
     datasetCorr = dataset[columnsInDataset[lowerCut:upperCut] +
                           [POROSITY_COLUMN_NAME]]
-    corr = datasetCorr.corr()[POROSITY_COLUMN_NAME]
-    # plotCorrelationMatrix(datasetCorr, annot=False)
+    filePathAndName = f'../results/featureSelection/CorrMatrix_Wav_{columnsInDataset[lowerCut]}_{columnsInDataset[upperCut]}'
+    plotCorrelationMatrix(datasetCorr,
+                          annot=False,
+                          fileName=f'{filePathAndName}.png')
+    corr = datasetCorr.corr()
+    corrAbove07 = corr[corr[POROSITY_COLUMN_NAME
+                            ].pow(2).pow(0.5) > 0.75][POROSITY_COLUMN_NAME]
+    print('Best Ones:\n', corrAbove07)
+    corrAbove07.to_csv(f'{filePathAndName}.csv')
 
 
-#corr = dataset.corr()
-#Todos = corr[corr[dataset.columns[-1]].pow(2).pow(0.5) > 0.8][dataset.columns[-1]]
+corr = datasetCorr.corr()
+Todos = corr[corr[dataset.columns[-1]
+                  ].pow(2).pow(0.5) > 0.8][dataset.columns[-1]]
+
+corrMatrixSelection = ['853.1', '940.5', '996.2',
+                       '1842.3', '1932.2', '2057.2', '2166.7', '2352.6']
+
+selectedFeaturesAllMethods = visualSelection + corrMatrixSelection
+selectedFeaturesAllMethods = list(
+    sorted(selectedFeaturesAllMethods, key=lambda x: float(x)))
+featureSelectedData = dataset[selectedFeaturesAllMethods +
+                              [dataset.columns[-1]]]
+
+plotCorrelationMatrix(featureSelectedData)
+print(featureSelectedData.columns)
 
 
-dataset = dataset[['1842.3', '1932.2', '2278.7'] + [dataset.columns[-1]]]
-
-plotCorrelationMatrix(dataset)
-
-print(dataset.columns)
-
-
-dataset = dataset[visualSelection + [dataset.columns[-1]]]
+featureSelectedData.to_csv(
+    '../results/featureSelection/featureSelectedData.csv')
 
 # dataset = dataset.drop(dataset.columns[:50], axis=1)
 # dataset = dataset.drop(dataset.columns[-50:-1], axis=1)
