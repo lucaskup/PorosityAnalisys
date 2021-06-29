@@ -1,5 +1,7 @@
 from sklearn.model_selection import GridSearchCV
 import statistics
+
+from pathlib import Path
 import pandas as pd
 import numpy as np
 import copy
@@ -20,6 +22,8 @@ from sklearn.metrics import r2_score
 from sklearn.metrics import mean_absolute_error
 
 from sklearn.model_selection import cross_validate
+
+from joblib import dump, load
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -73,6 +77,11 @@ def generateGraphs(crosValidScores, modelName):
     plt.style.use(['seaborn-ticks'])
     listYhat = []
     listY = []
+    # Creates the directory to save the results
+    pathToSaveModelEval = f'../results/modelTrained/{modelName}'
+    pathToSaveModelsDump = pathToSaveModelEval+'/trainedModels'
+    Path(pathToSaveModelsDump).mkdir(parents=True, exist_ok=True)
+
     for est in resultList:
         x_temp = cross_val_indexes[varia][1]
         if len(x_temp) > 0:
@@ -81,6 +90,8 @@ def generateGraphs(crosValidScores, modelName):
             pred = est.predict(x_temp)
             listYhat = listYhat + list(pred)
             listY = listY + list(ground_truth.reshape(1, -1)[0])
+            dump(
+                est, f'{pathToSaveModelsDump}/{modelName}_LOOCV_FOLD_{varia}.joblib')
         else:
             print('Problem in estimation')
         varia = varia + 1
@@ -116,23 +127,73 @@ def generateGraphs(crosValidScores, modelName):
     plt.title(modelName)
     plt.grid(True)
 
-    plt.show()
+    plt.savefig(pathToSaveModelEval+'/scatterPlot.png')
+    plt.clf()
+    with open(pathToSaveModelEval+'/metrics.txt', mode='w') as f:
+        f.write(f'R2: {r2Result}\n')
+        f.write(f'MAE: {maeResult}\n')
+        f.write(f'MSE: {mseResult}\n')
+        f.write(f'Residuals: {residualArray}\n')
+        f.write(f'Y: {yArray}\n')
+        f.write(f'YHat: {yHatArray}\n')
+    residualPlot(modelName, residualArray, pathToSave=pathToSaveModelEval)
 
 
-# Linear Regression
-linear = LinearRegression()
-evaluateModel(linear, 'Linear Reg')
+def residualPlot(modelName,
+                 residualList,
+                 pathToSave=None,
+                 binsUse=10):
 
-# Ridge Regression
-ridge = Ridge(alpha=0.01, max_iter=100000)
-evaluateModel(ridge, 'Ridge Reg')
+    plt.hist(residualList, bins=binsUse, density=False, edgecolor='black')
+    titleGraph = f'{modelName} Residuals'
+    plt.title(titleGraph)
+    plt.xlabel('Residual')
+    plt.ylabel('Frequency')
+    plt.grid()
+    plt.xlim((-1, 1))
+    if pathToSave is not None:
+        plt.savefig(pathToSave+'/residualsPlot.png')
+    else:
+        plt.show()
 
-# Lasso Regression
-lasso = Lasso(alpha=0.00025, max_iter=100000)
-evaluateModel(lasso, 'Lasso Reg')
+# Grid Search for the best hyperparameters
 
-# KNN Model Evaluation
+# Lasso
 
+
+gridParameters = {'alpha': [0.1, 0.01, 0.001, 0.0005, 0.00025, 0.0001, 0.00005],
+                  'max_iter': [100, 1000, 10000, 100000]}
+
+
+gsCV = GridSearchCV(Lasso(),
+                    gridParameters,
+                    cv=10,
+                    n_jobs=-1)
+
+gsCV.fit(X, Y)
+
+print(
+    f'Best Lasso Regressor:\n   Score > {gsCV.best_score_}\n   Params > {gsCV.best_params_}')
+
+
+# Ridge
+
+gridParameters = {'alpha': [0.1, 0.01, 0.001, 0.0005, 0.00025, 0.0001, 0.00005],
+                  'max_iter': [100, 1000, 10000, 100000]}
+
+
+gsCV = GridSearchCV(Ridge(),
+                    gridParameters,
+                    cv=10,
+                    n_jobs=-1)
+
+gsCV.fit(X, Y)
+
+print(
+    f'Best Ridge Regressor:\n   Score > {gsCV.best_score_}\n   Params > {gsCV.best_params_}')
+
+
+# kNN
 covParam = np.cov(X.astype(np.float32))
 invCovParam = np.linalg.pinv(covParam)
 
@@ -154,12 +215,7 @@ gsCV.fit(X, Y)
 print(
     f'Best kNN Classifier:\n   Score > {gsCV.best_score_}\n   Params > {gsCV.best_params_}')
 
-
-knn = KNeighborsRegressor(n_neighbors=1, metric='minkowski')
-evaluateModel(knn, 'KNN')
-
-# SVR Model Evaluation
-
+# SVR Model
 gridParameters = {'C': [0.1, 1, 10, 100, 1000],
                   'gamma': ['auto', 5, 1, 0.1, 0.01, 0.001, 0.0001],
                   'kernel': ['rbf']}
@@ -173,11 +229,7 @@ gsCV.fit(X, Y)
 print(
     f'Best SVM:\n   Score > {gsCV.best_score_}\n   Params > {gsCV.best_params_}')
 
-
-svr = SVR(gamma=1, C=10, epsilon=0.05, kernel='rbf')
-evaluateModel(svr, 'SVR')
-
-# Random Forest
+# RF
 
 gridParameters = {'n_estimators': [10, 50, 100, 200, 500],
                   'criterion': ['mse', 'mae']}
@@ -192,12 +244,7 @@ gsCV.fit(X, Y)
 print(
     f'Best Random Forst Regressor:\n   Score > {gsCV.best_score_}\n   Params > {gsCV.best_params_}')
 
-
-forest = RandomForestRegressor(n_estimators=100, criterion='mae')
-evaluateModel(forest, 'RF')
-
-# ANN Model Evaluation
-
+# MLP
 
 gridParameters = {'hidden_layer_sizes': [(5, 5), (5, 10), (5, 15),
                                          (10, 5), (10, 10), (10, 15),
@@ -222,7 +269,35 @@ print(
     f'Best MLP:\n   Score > {gsCV.best_score_}\n   Params > {gsCV.best_params_}')
 
 
-ann = MLPRegressor(max_iter=250000, hidden_layer_sizes=(10, 10, 10),
+###################################
+# Training and evaluation of models
+
+# Linear Regression
+linear = LinearRegression()
+evaluateModel(linear, 'Linear Reg')
+
+# Ridge Regression
+ridge = Ridge(alpha=0.001, max_iter=100)
+evaluateModel(ridge, 'Ridge Reg')
+
+# Lasso Regression
+lasso = Lasso(alpha=0.00025, max_iter=1000)
+evaluateModel(lasso, 'Lasso Reg')
+
+# KNN Model Evaluation
+knn = KNeighborsRegressor(n_neighbors=1, metric='minkowski')
+evaluateModel(knn, 'KNN')
+
+# SVR Model Evaluation
+svr = SVR(gamma=1, C=10, epsilon=0.05, kernel='rbf')
+evaluateModel(svr, 'SVR')
+
+# Random Forest
+forest = RandomForestRegressor(n_estimators=100, criterion='mae')
+evaluateModel(forest, 'RF')
+
+# MLP Model Evaluation
+mlp = MLPRegressor(max_iter=250000, hidden_layer_sizes=(10, 10, 10),
                    activation='relu', alpha=0.005, learning_rate='adaptive',
                    batch_size=1, solver='adam')
-evaluateModel(ann, 'ANN')
+evaluateModel(mlp, 'MLP')
