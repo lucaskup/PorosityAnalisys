@@ -1,5 +1,4 @@
 from sklearn.model_selection import GridSearchCV
-import keras
 import statistics
 import pandas as pd
 import numpy as np
@@ -68,10 +67,10 @@ def evaluateModel(model, modelName):
 
 def generateGraphs(crosValidScores, modelName):
     resultList = crosValidScores['estimator']
+    # Uses all the estimators from LOOCV to make estimations
     varia = 0
     cross_val_indexes = getKfoldIndexes()
     plt.style.use(['seaborn-ticks'])
-    meanSquaredErrorsList = []
     listYhat = []
     listY = []
     for est in resultList:
@@ -82,35 +81,37 @@ def generateGraphs(crosValidScores, modelName):
             pred = est.predict(x_temp)
             listYhat = listYhat + list(pred)
             listY = listY + list(ground_truth.reshape(1, -1)[0])
-            meanSquaredErrorsList.append(mean_squared_error(pred,
-                                                            ground_truth.reshape(1, -1)[0]))
         else:
-            print('Problem')
+            print('Problem in estimation')
         varia = varia + 1
+    #
 
+    # Scatter plot the estimations and the ground truth values
     plt.plot(listY, listYhat, "o")
     plt.plot([0, 1], [0, 1], 'k-')
     linear = LinearRegression()
 
     yArray = np.asarray(listY).reshape(len(listY), 1)
     yHatArray = np.asarray(listYhat).reshape(len(listYhat), 1)
-    linear.fit(yArray, yHatArray)
-    plt.plot(yArray, linear.predict(yArray), 'k-', color='red')
 
-    plt.xlabel('True Porosity')
+    residualArray = yArray - yHatArray
+
+    linear.fit(yArray, yHatArray)
+    plt.plot(yArray, linear.predict(yArray), '-', color='red')
+    plt.xlabel('Laboratory Determined Porosity')
     plt.ylabel(modelName+' Estimated Porosity')
 
     maeResult = mean_absolute_error(listY, listYhat)
-
     r2Result = r2_score(listY, listYhat)
-    print(f'R2: {r2Result}')
-    print(f'MSE: {meanSquaredErrorsList}')
-    print(f'MAE: {maeResult}')
+    mseResult = mean_squared_error(listY, listYhat)
 
-    trueMSE = mean_squared_error(listY, listYhat)
-    print('mean:', trueMSE)
-    print('std:', statistics.stdev(meanSquaredErrorsList))
-    plt.text(0, 0.92, f'R2: {round(r2Result, 4)}\nMSE: {round(trueMSE, 6)}\nMAE: {round(maeResult,4)}',
+    print(f'R2: {r2Result}')
+    print(f'MAE: {maeResult}')
+    print(f'MSE: {mseResult}')
+    print(f'Residuals: {residualArray}')
+
+    #print('std:', statistics.stdev(meanSquaredErrorsList))
+    plt.text(0, 0.85, f'R2: {round(r2Result, 4)}\nMSE: {round(mseResult, 6)}\nMAE: {round(maeResult,4)}',
              bbox=dict(facecolor='gray', alpha=0.5))
     plt.title(modelName)
     plt.grid(True)
@@ -196,23 +197,6 @@ forest = RandomForestRegressor(n_estimators=100, criterion='mae')
 evaluateModel(forest, 'RF')
 
 # ANN Model Evaluation
-
-
-def buildANN():
-    c = Sequential()
-    c.add(Dense(units=8,
-                kernel_initializer='uniform',
-                activation='sigmoid',
-                input_dim=len(X[0, :])))
-    c.add(Dense(units=8,
-                kernel_initializer='uniform',
-                activation='sigmoid'))
-    c.add(Dense(units=1, kernel_initializer='uniform',
-                activation='sigmoid'))
-    c.compile(optimizer='adam',
-              loss='mean_squared_error',
-              metrics=['mse'])
-    return c
 
 
 gridParameters = {'hidden_layer_sizes': [(5, 5), (5, 10), (5, 15),
