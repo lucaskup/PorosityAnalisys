@@ -81,6 +81,7 @@ def generateGraphs(crosValidScores, modelName):
     pathToSaveModelEval = f'../results/modelTrained/{modelName}'
     pathToSaveModelsDump = pathToSaveModelEval+'/trainedModels'
     Path(pathToSaveModelsDump).mkdir(parents=True, exist_ok=True)
+    plt.clf()
 
     for est in resultList:
         x_temp = cross_val_indexes[varia][1]
@@ -128,7 +129,7 @@ def generateGraphs(crosValidScores, modelName):
     plt.grid(True)
 
     plt.savefig(pathToSaveModelEval+'/scatterPlot.png')
-    plt.clf()
+
     with open(pathToSaveModelEval+'/metrics.txt', mode='w') as f:
         f.write(f'R2: {r2Result}\n')
         f.write(f'MAE: {maeResult}\n')
@@ -143,7 +144,7 @@ def residualPlot(modelName,
                  residualList,
                  pathToSave=None,
                  binsUse=10):
-
+    plt.clf()
     plt.hist(residualList, bins=binsUse, density=False, edgecolor='black')
     titleGraph = f'{modelName} Residuals'
     plt.title(titleGraph)
@@ -246,17 +247,23 @@ print(
 
 # MLP
 
-gridParameters = {'hidden_layer_sizes': [(5, 5), (5, 10), (5, 15),
-                                         (10, 5), (10, 10), (10, 15),
+gridParameters = {'hidden_layer_sizes': [(10, 5), (10, 10), (10, 15),
                                          (15, 5), (15, 10), (15, 15),
                                          (5, 5, 5), (5, 5, 10), (5, 5, 15),
                                          (10, 10, 5), (10, 10, 10), (10, 10, 15),
-                                         (10, 15, 5), (10, 15, 10), (10, 15, 15)],
+                                         (10, 15, 5), (10, 15, 10), (10, 15, 15),
+                                         (15, 5, 5), (15, 5, 10), (15, 5, 15),
+                                         (15, 10, 5), (15, 10, 10), (15, 10, 15),
+                                         (15, 15, 5), (15, 15, 10), (15, 15, 15),
+                                         (20, 5, 5), (20, 15, 10), (20, 20, 15),
+                                         (5, 15, 10, 5), (10, 15,
+                                                          10, 10), (15, 15, 10, 15),
+                                         (20, 15, 15, 5), (25, 15, 15, 10), (25, 15, 15, 15)],
                   'activation': ['logistic', 'relu'],
                   'solver': ['adam'],
-                  'alpha': [0.0001, 0.05, 0.005],
+                  'alpha': [0.05, 0.01, 0.001, 0.0005, 0.0001, 0.00001],
                   'learning_rate': ['constant', 'adaptive'],
-                  'batch_size': [1, 2, 5]
+                  'batch_size': [1, 2]
                   }
 gsCV = GridSearchCV(MLPRegressor(max_iter=5000),
                     gridParameters,
@@ -297,7 +304,7 @@ forest = RandomForestRegressor(n_estimators=100, criterion='mae')
 evaluateModel(forest, 'RF')
 
 # MLP Model Evaluation
-mlp = MLPRegressor(max_iter=250000, hidden_layer_sizes=(10, 10, 10),
-                   activation='relu', alpha=0.005, learning_rate='adaptive',
+mlp = MLPRegressor(max_iter=5000, hidden_layer_sizes=(20, 15, 15, 5),
+                   activation='relu', alpha=0.0005, learning_rate='constant',
                    batch_size=1, solver='adam')
 evaluateModel(mlp, 'MLP')
