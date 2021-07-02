@@ -1,3 +1,6 @@
+import statsmodels.graphics.gofplots as sm
+import scipy.stats as sc
+import seaborn as sns
 from sklearn.model_selection import GridSearchCV
 import statistics
 
@@ -42,7 +45,6 @@ mmY = MinMaxScaler()
 Y = mmY.fit_transform(Y.reshape(-1, 1)).ravel()
 
 # Auxiliary Functions
-upper_scores = None
 
 
 def getKfoldIndexes():
@@ -54,14 +56,12 @@ kfold_indexes = list(KFold(n_split, shuffle=True).split(X))
 
 
 def evaluateModel(model, modelName):
-    global upper_scores
     scores = cross_validate(model,
                             X,
                             y=np.ravel(Y),
                             cv=getKfoldIndexes(),
                             scoring={'mse': 'neg_mean_squared_error'},
                             return_estimator=True)
-    upper_scores = scores
     print(modelName, 'MSE', scores['test_mse'])
     # print('R2:',scores['test_r2'])
     generateGraphs(scores, modelName)
@@ -69,20 +69,13 @@ def evaluateModel(model, modelName):
     return scores
 
 
-def generateGraphs(crosValidScores, modelName):
+def computesYHat(crosValidScores, pathToSaveModelsDump, modelName):
     resultList = crosValidScores['estimator']
     # Uses all the estimators from LOOCV to make estimations
     varia = 0
     cross_val_indexes = getKfoldIndexes()
-    plt.style.use(['seaborn-ticks'])
     listYhat = []
     listY = []
-    # Creates the directory to save the results
-    pathToSaveModelEval = f'../results/modelTrained/{modelName}'
-    pathToSaveModelsDump = pathToSaveModelEval+'/trainedModels'
-    Path(pathToSaveModelsDump).mkdir(parents=True, exist_ok=True)
-    plt.clf()
-
     for est in resultList:
         x_temp = cross_val_indexes[varia][1]
         if len(x_temp) > 0:
@@ -96,7 +89,21 @@ def generateGraphs(crosValidScores, modelName):
         else:
             print('Problem in estimation')
         varia = varia + 1
-    #
+    return listY, listYhat
+
+
+def generateGraphs(crosValidScores, modelName):
+
+    plt.style.use(['seaborn-ticks'])
+
+    # Creates the directory to save the results
+    pathToSaveModelEval = f'../results/modelTrained/{modelName}'
+    pathToSaveModelsDump = pathToSaveModelEval+'/trainedModels'
+    Path(pathToSaveModelsDump).mkdir(parents=True, exist_ok=True)
+    plt.clf()
+
+    listY, listYhat = computesYHat(
+        crosValidScores, pathToSaveModelsDump, modelName)
 
     # Scatter plot the estimations and the ground truth values
     plt.plot(listY, listYhat, "o")
@@ -138,29 +145,58 @@ def generateGraphs(crosValidScores, modelName):
         f.write(f'Y: {yArray}\n')
         f.write(f'YHat: {yHatArray}\n')
     residualPlot(modelName, residualArray, pathToSave=pathToSaveModelEval)
+    crosValidScores['yHat'] = yHatArray
 
 
 def residualPlot(modelName,
                  residualList,
                  pathToSave=None,
                  binsUse=10):
-    plt.clf()
-    plt.hist(residualList, bins=binsUse, density=False, edgecolor='black')
-    titleGraph = f'{modelName} Residuals'
-    plt.title(titleGraph)
-    plt.xlabel('Residual')
-    plt.ylabel('Frequency')
-    plt.grid()
-    plt.xlim((-1, 1))
+    sns.set(style="ticks")
+    f, (ax_box, ax_hist) = plt.subplots(2, sharex=True,
+                                        gridspec_kw={
+                                            "height_ratios": (.15, .85)},
+                                        figsize=(10, 7))
+
+    ax_box.set_xlim((-1, 1))
+    ax_hist.set_xlim((-1, 1))
+    ax_hist.set_xlabel('Residual')
+    ax_hist.set_ylabel('Frequency')
+    maxValueTicks = max(np.histogram(residualList, bins=binsUse)[0]) + 1
+    ax_hist.set_yticks(np.arange(0, maxValueTicks, 1))
+    sns.boxplot(residualList, ax=ax_box)
+    sns.distplot(residualList,
+                 bins=binsUse,
+                 kde=False, hist=True, ax=ax_hist,
+                 hist_kws=dict(edgecolor="k", linewidth=1))
+
+    ax_box.set(yticks=[])
+    f.suptitle(f'{modelName} Residuals', fontsize=18)
+    sns.despine(ax=ax_hist)
+    sns.despine(ax=ax_box, left=True)
     if pathToSave is not None:
         plt.savefig(pathToSave+'/residualsPlot.png')
     else:
         plt.show()
 
+
+# Canonico
+# plt.clf()
+#plt.hist(residualList, bins=binsUse, density=False, edgecolor='black')
+#titleGraph = f'{modelName} Residuals'
+# plt.title(titleGraph)
+# plt.xlabel('Residual')
+# plt.ylabel('Frequency')
+# plt.grid()
+#plt.xlim((-1, 1))
+# if pathToSave is not None:
+#    plt.savefig(pathToSave+'/residualsPlot.png')
+# else:
+#    plt.show()
+
 # Grid Search for the best hyperparameters
 
 # Lasso
-
 
 gridParameters = {'alpha': [0.1, 0.01, 0.001, 0.0005, 0.00025, 0.0001, 0.00005],
                   'max_iter': [100, 1000, 10000, 100000]}
@@ -289,7 +325,8 @@ evaluateModel(ridge, 'Ridge Reg')
 
 # Lasso Regression
 lasso = Lasso(alpha=0.00025, max_iter=1000)
-evaluateModel(lasso, 'Lasso Reg')
+teste = evaluateModel(lasso, 'Lasso Reg')
+
 
 # KNN Model Evaluation
 knn = KNeighborsRegressor(n_neighbors=1, metric='minkowski')
