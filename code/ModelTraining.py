@@ -89,6 +89,10 @@ def computesYHat(crosValidScores, pathToSaveModelsDump, modelName):
         else:
             print('Problem in estimation')
         varia = varia + 1
+    # print(listY)
+
+    listY = mmY.inverse_transform(np.asarray(listY).reshape(-1, 1))
+    listYhat = mmY.inverse_transform(np.asarray(listYhat).reshape(-1, 1))
     return listY, listYhat
 
 
@@ -102,27 +106,27 @@ def generateGraphs(crosValidScores, modelName):
     Path(pathToSaveModelsDump).mkdir(parents=True, exist_ok=True)
     plt.clf()
 
-    listY, listYhat = computesYHat(
+    yArray, yHatArray = computesYHat(
         crosValidScores, pathToSaveModelsDump, modelName)
 
     # Scatter plot the estimations and the ground truth values
-    plt.plot(listY, listYhat, "o")
+    plt.plot(yArray, yHatArray, "o")
     plt.plot([0, 1], [0, 1], 'k-')
     linear = LinearRegression()
 
-    yArray = np.asarray(listY).reshape(len(listY), 1)
-    yHatArray = np.asarray(listYhat).reshape(len(listYhat), 1)
+    #yArray = np.asarray(listY).reshape(len(listY), 1)
+    #yHatArray = np.asarray(listYhat).reshape(len(listYhat), 1)
 
     residualArray = yArray - yHatArray
 
     linear.fit(yArray, yHatArray)
     plt.plot(yArray, linear.predict(yArray), '-', color='red')
-    plt.xlabel('Laboratory Determined Porosity')
-    plt.ylabel(modelName+' Estimated Porosity')
+    plt.xlabel('Laboratory Determined Porosity [%]')
+    plt.ylabel(modelName+' Estimated Porosity [%]')
 
-    maeResult = mean_absolute_error(listY, listYhat)
-    r2Result = r2_score(listY, listYhat)
-    mseResult = mean_squared_error(listY, listYhat)
+    maeResult = mean_absolute_error(yArray, yHatArray)
+    r2Result = r2_score(yArray, yHatArray)
+    mseResult = mean_squared_error(yArray, yHatArray)
 
     print(f'R2: {r2Result}')
     print(f'MAE: {maeResult}')
@@ -130,7 +134,7 @@ def generateGraphs(crosValidScores, modelName):
     print(f'Residuals: {residualArray}')
 
     #print('std:', statistics.stdev(meanSquaredErrorsList))
-    plt.text(0, 0.85, f'R2: {round(r2Result, 4)}\nMSE: {round(mseResult, 6)}\nMAE: {round(maeResult,4)}',
+    plt.text(0, 17.5, f'R2: {round(r2Result, 4)}\nMSE: {round(mseResult, 6)}\nMAE: {round(maeResult,4)}',
              bbox=dict(facecolor='gray', alpha=0.5))
     plt.title(modelName)
     plt.grid(True)
@@ -158,12 +162,13 @@ def residualPlot(modelName,
                                             "height_ratios": (.15, .85)},
                                         figsize=(10, 7))
 
-    ax_box.set_xlim((-1, 1))
-    ax_hist.set_xlim((-1, 1))
+    ax_box.set_xlim((-25, 25))
+    ax_hist.set_xlim((-25, 25))
     ax_hist.set_xlabel('Residual')
     ax_hist.set_ylabel('Frequency')
     maxValueTicks = max(np.histogram(residualList, bins=binsUse)[0]) + 1
     ax_hist.set_yticks(np.arange(0, maxValueTicks, 1))
+    ax_hist.set_xticks(np.arange(-25, 25, 5))
     sns.boxplot(residualList, ax=ax_box)
     sns.distplot(residualList,
                  bins=binsUse,
@@ -317,31 +322,31 @@ print(
 
 # Linear Regression
 linear = LinearRegression()
-evaluateModel(linear, 'Linear Reg')
+linearEval = evaluateModel(linear, 'Linear Reg')
 
 # Ridge Regression
 ridge = Ridge(alpha=0.001, max_iter=100)
-evaluateModel(ridge, 'Ridge Reg')
+ridgeEval = evaluateModel(ridge, 'Ridge Reg')
 
 # Lasso Regression
 lasso = Lasso(alpha=0.00025, max_iter=1000)
-teste = evaluateModel(lasso, 'Lasso Reg')
+lassoEval = evaluateModel(lasso, 'Lasso Reg')
 
 
 # KNN Model Evaluation
 knn = KNeighborsRegressor(n_neighbors=1, metric='minkowski')
-evaluateModel(knn, 'KNN')
+knnEval = evaluateModel(knn, 'KNN')
 
 # SVR Model Evaluation
 svr = SVR(gamma=1, C=10, epsilon=0.05, kernel='rbf')
-evaluateModel(svr, 'SVR')
+svrEval = evaluateModel(svr, 'SVR')
 
 # Random Forest
 forest = RandomForestRegressor(n_estimators=100, criterion='mae')
-evaluateModel(forest, 'RF')
+forestEval = evaluateModel(forest, 'RF')
 
 # MLP Model Evaluation
 mlp = MLPRegressor(max_iter=5000, hidden_layer_sizes=(20, 15, 15, 5),
                    activation='relu', alpha=0.0005, learning_rate='constant',
                    batch_size=1, solver='adam')
-evaluateModel(mlp, 'MLP')
+mlpEval = evaluateModel(mlp, 'MLP')
