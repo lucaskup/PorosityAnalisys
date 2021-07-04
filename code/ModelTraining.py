@@ -1,3 +1,4 @@
+from os import sep
 import statsmodels.graphics.gofplots as sm
 import scipy.stats as sc
 import seaborn as sns
@@ -98,20 +99,23 @@ def computesYHat(crosValidScores, pathToSaveModelsDump, modelName):
 
 def generateGraphs(crosValidScores, modelName):
 
+    plt.clf()
     plt.style.use(['seaborn-ticks'])
-
+    plt.figure(figsize=(7.5, 4.75))
     # Creates the directory to save the results
     pathToSaveModelEval = f'../results/modelTrained/{modelName}'
     pathToSaveModelsDump = pathToSaveModelEval+'/trainedModels'
     Path(pathToSaveModelsDump).mkdir(parents=True, exist_ok=True)
-    plt.clf()
 
     yArray, yHatArray = computesYHat(
         crosValidScores, pathToSaveModelsDump, modelName)
 
     # Scatter plot the estimations and the ground truth values
+
     plt.plot(yArray, yHatArray, "o")
-    plt.plot([0, 1], [0, 1], 'k-')
+    maxXAxis = max(yArray)
+    maxYAxis = max(yHatArray)
+    plt.plot([0, maxXAxis], [0, maxXAxis], 'k-')
     linear = LinearRegression()
 
     #yArray = np.asarray(listY).reshape(len(listY), 1)
@@ -134,12 +138,13 @@ def generateGraphs(crosValidScores, modelName):
     print(f'Residuals: {residualArray}')
 
     #print('std:', statistics.stdev(meanSquaredErrorsList))
-    plt.text(0, 17.5, f'R2: {round(r2Result, 4)}\nMSE: {round(mseResult, 6)}\nMAE: {round(maeResult,4)}',
+    plt.text(0, maxYAxis - 4, f'R2: {round(r2Result, 4)}\nMSE: {round(mseResult, 6)}\nMAE: {round(maeResult,4)}',
              bbox=dict(facecolor='gray', alpha=0.5))
     plt.title(modelName)
     plt.grid(True)
 
     plt.savefig(pathToSaveModelEval+'/scatterPlot.png')
+    plt.show()
 
     with open(pathToSaveModelEval+'/metrics.txt', mode='w') as f:
         f.write(f'R2: {r2Result}\n')
@@ -150,12 +155,13 @@ def generateGraphs(crosValidScores, modelName):
         f.write(f'YHat: {yHatArray}\n')
     residualPlot(modelName, residualArray, pathToSave=pathToSaveModelEval)
     crosValidScores['yHat'] = yHatArray
+    crosValidScores['y'] = yArray
 
 
 def residualPlot(modelName,
                  residualList,
-                 pathToSave=None,
-                 binsUse=10):
+                 pathToSave=None):
+    plt.clf()
     sns.set(style="ticks")
     f, (ax_box, ax_hist) = plt.subplots(2, sharex=True,
                                         gridspec_kw={
@@ -166,12 +172,13 @@ def residualPlot(modelName,
     ax_hist.set_xlim((-25, 25))
     ax_hist.set_xlabel('Residual')
     ax_hist.set_ylabel('Frequency')
-    maxValueTicks = max(np.histogram(residualList, bins=binsUse)[0]) + 1
+    customBins = np.arange(-25.5, 25.5, 1)
+    maxValueTicks = max(np.histogram(residualList, bins=customBins)[0]) + 1
     ax_hist.set_yticks(np.arange(0, maxValueTicks, 1))
     ax_hist.set_xticks(np.arange(-25, 25, 5))
     sns.boxplot(residualList, ax=ax_box)
     sns.distplot(residualList,
-                 bins=binsUse,
+                 bins=customBins,
                  kde=False, hist=True, ax=ax_hist,
                  hist_kws=dict(edgecolor="k", linewidth=1))
 
@@ -180,9 +187,8 @@ def residualPlot(modelName,
     sns.despine(ax=ax_hist)
     sns.despine(ax=ax_box, left=True)
     if pathToSave is not None:
-        plt.savefig(pathToSave+'/residualsPlot.png')
-    else:
-        plt.show()
+        f.savefig(pathToSave+'/residualsPlot.png')
+    f.show()
 
 
 # Canonico
@@ -306,7 +312,7 @@ gridParameters = {'hidden_layer_sizes': [(10, 5), (10, 10), (10, 15),
                   'learning_rate': ['constant', 'adaptive'],
                   'batch_size': [1, 2]
                   }
-gsCV = GridSearchCV(MLPRegressor(max_iter=5000),
+gsCV = GridSearchCV(MLPRegressor(max_iter=50000),
                     gridParameters,
                     cv=10,
                     n_jobs=-1)
@@ -346,7 +352,14 @@ forest = RandomForestRegressor(n_estimators=100, criterion='mae')
 forestEval = evaluateModel(forest, 'RF')
 
 # MLP Model Evaluation
-mlp = MLPRegressor(max_iter=5000, hidden_layer_sizes=(20, 15, 15, 5),
-                   activation='relu', alpha=0.0005, learning_rate='constant',
+mlp = MLPRegressor(max_iter=50000, hidden_layer_sizes=(15, 15, 10, 15),
+                   activation='relu', alpha=0.001, learning_rate='constant',
                    batch_size=1, solver='adam')
 mlpEval = evaluateModel(mlp, 'MLP')
+
+yHatTable = np.concatenate((linearEval['y'], linearEval['yHat'], ridgeEval['yHat'], lassoEval['yHat'],
+                            knnEval['yHat'], svrEval['yHat'], forestEval['yHat'], mlpEval['yHat']),
+                           axis=1)
+yHatDf = pd.DataFrame(yHatTable, columns=['Y',
+                      'Linear', 'Ridge', 'Lasso', 'kNN', 'SVR', 'RF', 'MLP'])
+yHatDf.to_csv('../results/modelTrained/predictions.csv', sep=';', decimal='.')
