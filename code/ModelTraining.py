@@ -179,14 +179,16 @@ def generateGraphs(crosValidScores, modelName, saveResultFiles=False):
              textToPlot,
              bbox=dict(facecolor='gray', alpha=0.5),
              family='monospace')
-    plt.title(modelName)
+    # plt.title(modelName)
     plt.grid(True)
     plt.xlabel('Laboratory Determined Porosity [%]')
     plt.ylabel(modelName+' Estimated Porosity [%]')
 
     if saveResultFiles:
         # Save Graph
-        plt.savefig(pathToSaveModelEval+'/scatterPlot.png')
+        nameInGraph = modelName.split(' ')[0]
+        plt.savefig(f'{pathToSaveModelEval}/scatterPlot{nameInGraph}.png',
+                    bbox_inches='tight', pad_inches=0.01)
         # Save file metrics
         with open(pathToSaveModelEval+'/metrics.txt', mode='w') as f:
             f.write(f'R2: {r2Result}\n')
@@ -209,7 +211,8 @@ def residualPlot(modelName,
     f, (ax_box, ax_hist) = plt.subplots(2, sharex=True,
                                         gridspec_kw={
                                             "height_ratios": (.15, .85)},
-                                        figsize=(10, 7))
+                                        figsize=(7.5, 4.75))
+    # figsize=(10, 7))
     ax_box.set_xlim((-25, 25))
     ax_hist.set_xlim((-25, 25))
     ax_hist.set_xlabel('Residual')
@@ -223,11 +226,13 @@ def residualPlot(modelName,
                  bins=customBins,
                  kde=False, ax=ax_hist, legend=False, edgecolor="k", linewidth=1)
     ax_box.set(yticks=[])
-    f.suptitle(f'{modelName} Residuals', fontsize=18)
+    # f.suptitle(f'{modelName} Residuals', fontsize=18)
     sns.despine(ax=ax_hist)
     sns.despine(ax=ax_box, left=True)
     if pathToSave is not None:
-        plt.savefig(pathToSave+'/residualsPlot.png')
+        nameInGraph = modelName.split(' ')[0]
+        plt.savefig(f'{pathToSave}/residualsPlot{nameInGraph}.png',
+                    bbox_inches='tight', pad_inches=0.01)
     plt.show()
 
 # Grid Search for the best hyperparameters
