@@ -301,7 +301,7 @@ gridParameters = {'hidden_layer_sizes': [(5, 5), (5, 10), (5, 20),
                                          (20, 15, 10), (20, 15, 15, 10)],
                   'activation': ['relu'],
                   'solver': ['adam'],
-                  'max_iter': [50, 500, 2000, 5000],
+                  'max_iter': [50, 500, 1000, 1250, 2000, 5000],
                   'alpha': [0.01, 0.001, 0.0001],
                   'learning_rate': ['constant'],
                   'batch_size': [1, 2, 3],
@@ -309,16 +309,16 @@ gridParameters = {'hidden_layer_sizes': [(5, 5), (5, 10), (5, 20),
                   'early_stopping': [True, False]
                   }
 
-gridParameters = {'hidden_layer_sizes': [(20, 15, 15, 10), (20, 15, 10), (20, 10)],
-                  'max_iter': [1000, 1250, 1500, 1750],
-                  'activation': ['relu'],
-                  'solver': ['adam'],
-                  'alpha': [0.001],
-                  'learning_rate': ['adaptive'],
-                  'batch_size': [2],
-                  'learning_rate_init': [0.001],
-                  'early_stopping': [False]
-                  }
+# gridParameters = {'hidden_layer_sizes': [(20, 15, 15, 10), (20, 15, 10), (20, 10)],
+#                  'max_iter': [1000, 1250, 1500, 1750],
+#                  'activation': ['relu'],
+#                  'solver': ['adam'],
+#                  'alpha': [0.001],
+#                  'learning_rate': ['adaptive'],
+#                  'batch_size': [2],
+#                  'learning_rate_init': [0.001],
+#                  'early_stopping': [False]
+#                  }
 findBestHyperparamsGridSearch(gridParameters, 'MLP', MLPRegressor())
 
 ###################################
