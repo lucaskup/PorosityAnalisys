@@ -213,14 +213,15 @@ def residualPlot(modelName,
                                             "height_ratios": (.15, .85)},
                                         figsize=(7.5, 4.75))
     # figsize=(10, 7))
-    ax_box.set_xlim((-25, 25))
-    ax_hist.set_xlim((-25, 25))
+    ax_box.set_xlim((-20, 20))
+    ax_hist.set_xlim((-20, 20))
+    ax_hist.set_ylim((0, 12))
     ax_hist.set_xlabel('Residual')
     ax_hist.set_ylabel('Frequency')
-    customBins = np.arange(-25.5, 25.5, 1)
+    customBins = np.arange(-20.5, 20.5, 1)
     maxValueTicks = max(np.histogram(residualList, bins=customBins)[0]) + 1
-    ax_hist.set_yticks(np.arange(0, maxValueTicks, 1))
-    ax_hist.set_xticks(np.arange(-25, 25, 5))
+    ax_hist.set_yticks(np.arange(0, 13, 1))
+    ax_hist.set_xticks(np.arange(-20, 25, 5))
     sns.boxplot(x=residualList, ax=ax_box)
     sns.histplot(data=residualList,
                  bins=customBins,
