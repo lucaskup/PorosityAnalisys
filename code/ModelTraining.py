@@ -101,13 +101,43 @@ def getKfoldIndexes():
 
 
 def evaluateModel(model, modelName, saveResultFiles=False):
+    # Setup directory to save results
+    # Creates the directory to save the results
+    pathToSaveModelEval = None
+    pathToSaveModelsDump = None
+    if saveResultFiles:
+        pathToSaveModelEval = f'../results/modelTrained/{modelName}'
+        pathToSaveModelsDump = pathToSaveModelEval+'/trainedModels'
+        Path(pathToSaveModelsDump).mkdir(parents=True, exist_ok=True)
+
     scores = cross_validate(model,
                             X,
                             y=np.ravel(Y),
                             cv=getKfoldIndexes(),
                             scoring={'mse': 'neg_mean_squared_error'},
                             return_estimator=True)
-    generateGraphs(scores, modelName, saveResultFiles=saveResultFiles)
+    yArray, yHatArray = computesYHat(
+        scores, pathToSaveModelsDump, modelName=modelName)
+    # generateGraphs(yArray, yHatArray, modelName,
+    #               pathToSaveModelEval=pathToSaveModelEval)
+    scores['yHat'] = yHatArray
+    scores['y'] = yArray
+
+    predNPArray = np.concatenate((yArray, yHatArray),
+                                 axis=1)
+    dfColumnsExport = ['Y', 'YHat']
+    predDf = pd.DataFrame(predNPArray, columns=dfColumnsExport)
+    predDf.to_csv(f'{pathToSaveModelEval}/predictions.csv',
+                  sep=';',
+                  decimal='.',
+                  index=False)
+    r2Result, mseResult, maeResult = computeMetrics(yArray, yHatArray)
+
+    textToPlot = f'{modelName}\n' \
+        f'R2:  {r2Result:7.4f}\n' \
+        f'MSE: {mseResult:7.4f}\n' \
+        f'MAE: {maeResult:7.4f}'
+    print(textToPlot)
     return scores
 
 
@@ -137,24 +167,20 @@ def computesYHat(crosValidScores, pathToSaveModelsDump=None, modelName=None):
     return listY, listYhat
 
 
-def generateGraphs(crosValidScores, modelName, saveResultFiles=False):
+def computeMetrics(yArray, yHatArray):
+    maeResult = mean_absolute_error(yArray, yHatArray)
+    r2Result = r2_score(yArray, yHatArray)
+    mseResult = mean_squared_error(yArray, yHatArray)
+    return r2Result, mseResult, maeResult
+
+
+def generateGraphs(yArray, yHatArray, modelName, pathToSaveModelEval=None):
     plt.clf()
     plt.style.use(['seaborn-ticks'])
-    plt.figure(figsize=(7.5, 4.75))
-
-    # Creates the directory to save the results
-    pathToSaveModelEval = None
-    pathToSaveModelsDump = None
-    if saveResultFiles:
-        pathToSaveModelEval = f'../results/modelTrained/{modelName}'
-        pathToSaveModelsDump = pathToSaveModelEval+'/trainedModels'
-        Path(pathToSaveModelsDump).mkdir(parents=True, exist_ok=True)
+    plt.figure(figsize=(6.5, 4.1))  # 4.75))
 
     # Plots the estimatives
-    yArray, yHatArray = computesYHat(
-        crosValidScores, pathToSaveModelsDump, modelName=modelName)
     plt.plot(yArray, yHatArray, "o")
-
     # Plots a black line for comparation purpose
     _, xmax = plt.xlim()
     plt.plot([0, xmax], [0, xmax], 'k-')
@@ -166,14 +192,12 @@ def generateGraphs(crosValidScores, modelName, saveResultFiles=False):
     linear.fit(yArray, yHatArray)
     plt.plot(yArray, linear.predict(yArray), '-', color='red')
 
-    maeResult = mean_absolute_error(yArray, yHatArray)
-    r2Result = r2_score(yArray, yHatArray)
-    mseResult = mean_squared_error(yArray, yHatArray)
+    r2Result, mseResult, maeResult = computeMetrics(yArray, yHatArray)
     residualArray = yArray - yHatArray
 
-    textToPlot = f'R2:  {r2Result:2.4f}\n' \
-        f'MSE: {mseResult:2.4f}\n' \
-        f'MAE: {maeResult:2.4f}'
+    textToPlot = f'R2:  {r2Result:7.4f}\n' \
+        f'MSE: {mseResult:7.4f}\n' \
+        f'MAE: {maeResult:7.4f}'
     print(textToPlot)
     plt.text(0, ymax - yDistanceY0_yMax * 0.2,
              textToPlot,
@@ -184,7 +208,7 @@ def generateGraphs(crosValidScores, modelName, saveResultFiles=False):
     plt.xlabel('Laboratory Determined Porosity [%]')
     plt.ylabel(modelName+' Estimated Porosity [%]')
 
-    if saveResultFiles:
+    if pathToSaveModelEval:
         # Save Graph
         nameInGraph = modelName.split(' ')[0]
         plt.savefig(f'{pathToSaveModelEval}/scatterPlot{nameInGraph}.png',
@@ -199,8 +223,6 @@ def generateGraphs(crosValidScores, modelName, saveResultFiles=False):
             f.write(f'YHat: {yHatArray}\n')
     plt.show()
     residualPlot(modelName, residualArray, pathToSave=pathToSaveModelEval)
-    crosValidScores['yHat'] = yHatArray
-    crosValidScores['y'] = yArray
 
 
 def residualPlot(modelName,
@@ -210,18 +232,18 @@ def residualPlot(modelName,
     sns.set(style="ticks")
     f, (ax_box, ax_hist) = plt.subplots(2, sharex=True,
                                         gridspec_kw={
-                                            "height_ratios": (.15, .85)},
-                                        figsize=(7.5, 4.75))
+                                            "height_ratios": (.1, .9)},
+                                        figsize=(6.5, 6.5))
     # figsize=(10, 7))
-    ax_box.set_xlim((-20, 20))
-    ax_hist.set_xlim((-20, 20))
+    ax_box.set_xlim((-15, 15))
+    ax_hist.set_xlim((-15, 15))
     ax_hist.set_ylim((0, 12))
-    ax_hist.set_xlabel('Residual')
+    ax_hist.set_xlabel(f'{modelName} Porosity Estimation Residual')
     ax_hist.set_ylabel('Frequency')
-    customBins = np.arange(-20.5, 20.5, 1)
-    maxValueTicks = max(np.histogram(residualList, bins=customBins)[0]) + 1
+    customBins = np.arange(-15.5, 15.5, 1)
+    # maxValueTicks = max(np.histogram(residualList, bins=customBins)[0]) + 1
     ax_hist.set_yticks(np.arange(0, 13, 1))
-    ax_hist.set_xticks(np.arange(-20, 25, 5))
+    ax_hist.set_xticks(np.arange(-15, 16, 3))
     sns.boxplot(x=residualList, ax=ax_box)
     sns.histplot(data=residualList,
                  bins=customBins,
@@ -373,10 +395,27 @@ yHatTable = np.concatenate((X[crossValIndexes], linearEval['y'], linearEval['yHa
 dfColumnsExport = wavelengthColumns + ['Y', 'Linear', 'Ridge',
                                        'Lasso', 'kNN', 'SVR', 'RF', 'MLP']
 yHatDf = pd.DataFrame(yHatTable, columns=dfColumnsExport)
-yHatDf.to_csv('../results/modelTrained/predictions.csv',
+yHatDf.to_csv('../results/modelTrained/summary.csv',
               sep=';',
               decimal='.',
               index=False)
+
+
+def plotAllGraphs():
+    models = ['Linear Reg', 'Lasso Reg',
+              'Ridge Reg', 'KNN', 'SVR', 'RF', 'MLP']
+    for modelName in models:
+        pathToModelData = f'../results/modelTrained/{modelName}'
+        pathToPredictionFile = f'{pathToModelData}/predictions.csv'
+        predictionData = pd.read_csv(
+            pathToPredictionFile, decimal='.', sep=';')
+        yArray = predictionData['Y'].values.reshape(-1, 1)
+        yHatArray = predictionData['YHat'].values.reshape(-1, 1)
+        generateGraphs(yArray, yHatArray, modelName,
+                       pathToSaveModelEval=pathToModelData)
+
+
+plotAllGraphs()
 
 
 def yetToBeNamed(cvResults):
