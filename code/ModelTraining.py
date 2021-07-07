@@ -1,4 +1,3 @@
-import sklearn
 from scipy.stats.stats import mode
 import statsmodels.graphics.gofplots as sm
 import scipy.stats as sc
@@ -120,8 +119,6 @@ def evaluateModel(model, modelName, saveResultFiles=False):
         scores, pathToSaveModelsDump, modelName=modelName)
     # generateGraphs(yArray, yHatArray, modelName,
     #               pathToSaveModelEval=pathToSaveModelEval)
-    scores['yHat'] = yHatArray
-    scores['y'] = yArray
 
     predNPArray = np.concatenate((yArray, yHatArray),
                                  axis=1)
@@ -137,6 +134,12 @@ def evaluateModel(model, modelName, saveResultFiles=False):
         f'R2:  {r2Result:7.4f}\n' \
         f'MSE: {mseResult:7.4f}\n' \
         f'MAE: {maeResult:7.4f}'
+    scores['yHat'] = yHatArray
+    scores['y'] = yArray
+    scores['R2'] = r2Result
+    scores['MSE'] = mseResult
+    scores['MAE'] = maeResult
+    scores['modelName'] = modelName
     print(textToPlot)
     return scores
 
@@ -395,10 +398,21 @@ yHatTable = np.concatenate((X[crossValIndexes], linearEval['y'], linearEval['yHa
 dfColumnsExport = wavelengthColumns + ['Y', 'Linear', 'Ridge',
                                        'Lasso', 'kNN', 'SVR', 'RF', 'MLP']
 yHatDf = pd.DataFrame(yHatTable, columns=dfColumnsExport)
-yHatDf.to_csv('../results/modelTrained/summary.csv',
+yHatDf.to_csv('../results/modelTrained/completePredictions.csv',
               sep=';',
               decimal='.',
               index=False)
+
+indexColumns = ['modelName', 'R2', 'MSE', 'MAE']
+summaryDF = pd.DataFrame(
+    np.asarray(list(map(lambda x: list(map(lambda index: x[index], indexColumns)),
+                        [linearEval, ridgeEval, lassoEval,
+                        knnEval, svrEval, forestEval, mlpEval]))),
+    columns=indexColumns)
+summaryDF.to_csv('../results/modelTrained/summary.csv',
+                 sep=';',
+                 decimal='.',
+                 index=False)
 
 
 def plotAllGraphs():
