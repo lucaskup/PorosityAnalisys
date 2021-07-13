@@ -67,7 +67,8 @@ Todos = corr[corr[dataset.columns[-1]
 corrMatrixSelection = ['853.1', '940.5', '996.2',
                        '1842.3', '1932.2', '2057.2', '2166.7', '2352.6']
 
-selectedFeaturesAllMethods = visualSelection + corrMatrixSelection
+selectedFeaturesAllMethods = list(
+    dict.fromkeys(visualSelection + corrMatrixSelection))
 selectedFeaturesAllMethods = list(
     sorted(selectedFeaturesAllMethods, key=lambda x: float(x)))
 featureSelectedData = dataset[selectedFeaturesAllMethods +

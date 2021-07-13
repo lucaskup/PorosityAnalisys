@@ -18,6 +18,7 @@ from sklearn.svm import SVR
 from sklearn.neural_network import MLPRegressor
 from sklearn.linear_model import Ridge
 from sklearn.linear_model import Lasso
+from sklearn.linear_model import ElasticNet
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_absolute_error
@@ -40,59 +41,6 @@ Y = mmY.fit_transform(Y.reshape(-1, 1)).ravel()
 # Auxiliary Functions
 n_split = len(X)
 kfold_indexes = list(KFold(n_split, shuffle=True).split(X))
-
-
-def corrected_std(differences, n_train, n_test):
-    """Corrects standard deviation using Nadeau and Bengio's approach.
-
-    Parameters
-    ----------
-    differences : ndarray of shape (n_samples, 1)
-        Vector containing the differences in the score metrics of two models.
-    n_train : int
-        Number of samples in the training set.
-    n_test : int
-        Number of samples in the testing set.
-
-    Returns
-    -------
-    corrected_std : int
-        Variance-corrected standard deviation of the set of differences.
-    """
-    n = n_train + n_test
-    corrected_var = (
-        np.var(differences, ddof=1) * ((1 / n) + (n_test / n_train))
-    )
-    corrected_std = np.sqrt(corrected_var)
-    return corrected_std
-
-
-def compute_corrected_ttest(differences, df, n_train, n_test):
-    """Computes right-tailed paired t-test with corrected variance.
-
-    Parameters
-    ----------
-    differences : array-like of shape (n_samples, 1)
-        Vector containing the differences in the score metrics of two models.
-    df : int
-        Degrees of freedom.
-    n_train : int
-        Number of samples in the training set.
-    n_test : int
-        Number of samples in the testing set.
-
-    Returns
-    -------
-    t_stat : float
-        Variance-corrected t-statistic.
-    p_val : float
-        Variance-corrected p-value.
-    """
-    mean = np.mean(differences)
-    std = corrected_std(differences, n_train, n_test)
-    t_stat = mean / std
-    p_val = t.sf(np.abs(t_stat), df)  # right-tailed t-test
-    return t_stat, p_val
 
 
 def getKfoldIndexes():
@@ -235,8 +183,8 @@ def residualPlot(modelName,
     sns.set(style="ticks")
     f, (ax_box, ax_hist) = plt.subplots(2, sharex=True,
                                         gridspec_kw={
-                                            "height_ratios": (.1, .9)},
-                                        figsize=(6.5, 6.5))
+                                            "height_ratios": (.15, .85)},
+                                        figsize=(6.5, 4.1))
     # figsize=(10, 7))
     ax_box.set_xlim((-15, 15))
     ax_hist.set_xlim((-15, 15))
@@ -298,6 +246,15 @@ findBestHyperparamsGridSearch(gridParameters, 'Lasso Reg', Lasso())
 gridParameters = {'alpha': [0.1, 0.01, 0.001, 0.0005, 0.00025, 0.0001, 0.00005],
                   'max_iter': [100, 1000, 10000, 100000]}
 findBestHyperparamsGridSearch(gridParameters, 'Ridge Reg', Ridge())
+
+# ElasticNet
+
+gridParameters = {'alpha': [0.1, 0.01, 0.001, 0.0005, 0.00025, 0.0001, 0.00005],
+                  'l1_ratio': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+                  'max_iter': [100, 1000, 10000, 100000]}
+findBestHyperparamsGridSearch(gridParameters, 'ElasticNet', ElasticNet())
+
+
 # kNN
 covParam = np.cov(X.astype(np.float32))
 invCovParam = np.linalg.pinv(covParam)
@@ -326,17 +283,16 @@ findBestHyperparamsGridSearch(gridParameters, 'RF', RandomForestRegressor())
 
 # sorted(sklearn.metrics.SCORERS.keys())
 # MLP
-gridParameters = {'hidden_layer_sizes': [(5, 5), (5, 10), (5, 20),
-                                         (10, 5), (10, 10), (10, 20),
-                                         (20, 5), (20, 10), (15, 15),
-                                         (20, 15, 10), (20, 15, 15, 10)],
+gridParameters = {'hidden_layer_sizes': [(5, 5), (15, 10),
+                                         (20, 15, 10),
+                                         (20, 15, 15, 10)],
                   'activation': ['relu'],
                   'solver': ['adam'],
-                  'max_iter': [50, 500, 1000, 1250, 2000, 5000],
+                  'max_iter': [500, 1000, 1250, 1600],
                   'alpha': [0.01, 0.001, 0.0001],
-                  'learning_rate': ['constant'],
+                  'learning_rate': ['constant', 'adaptive'],
                   'batch_size': [1, 2, 3],
-                  'learning_rate_init': [0.01, 0.001, 0.0001],
+                  'learning_rate_init': [0.01, 0.001],
                   'early_stopping': [True, False]
                   }
 
@@ -367,22 +323,27 @@ ridgeEval = evaluateModel(ridge, 'Ridge Reg', saveResultFiles=True)
 lasso = Lasso(alpha=0.00025, max_iter=1000)
 lassoEval = evaluateModel(lasso, 'Lasso Reg', saveResultFiles=True)
 
+# ElasticNet
+elasticNet = ElasticNet(alpha=0.00025, l1_ratio=1, max_iter=1000)
+elasticNetEval = evaluateModel(elasticNet, 'ElasticNet', saveResultFiles=True)
+# elasticNetEval['estimator'][0].coef_
+
 # KNN Model Evaluation
-knn = KNeighborsRegressor(n_neighbors=1, metric='minkowski')
+knn = KNeighborsRegressor(n_neighbors=2, metric='minkowski')
 knnEval = evaluateModel(knn, 'KNN', saveResultFiles=True)
 
 # SVR Model Evaluation
-svr = SVR(gamma=1, C=100, epsilon=0.01, kernel='rbf')
+svr = SVR(gamma=1, C=10, epsilon=0.01, kernel='rbf')
 svrEval = evaluateModel(svr, 'SVR', saveResultFiles=True)
 
 # Random Forest
-forest = RandomForestRegressor(n_estimators=500, criterion='mae')
+forest = RandomForestRegressor(n_estimators=200, criterion='mae')
 forestEval = evaluateModel(forest, 'RF', saveResultFiles=True)
 
 # MLP Model Evaluation
-mlp = MLPRegressor(max_iter=1250, hidden_layer_sizes=(20, 15, 15, 10),
-                   activation='relu', alpha=0.001, learning_rate='adaptive',
-                   learning_rate_init=0.001, batch_size=2, solver='adam')
+mlp = MLPRegressor(max_iter=1000, hidden_layer_sizes=(20, 15, 15, 10),
+                   activation='relu', alpha=0.01, learning_rate='constant',
+                   learning_rate_init=0.001, batch_size=3, solver='adam')
 mlpEval = evaluateModel(mlp, 'MLP', saveResultFiles=True)
 
 
@@ -393,10 +354,10 @@ crossValIndexes = list(map(lambda x: x[1][0], crossValIndexes))
 wavelengthColumns = list(dataset.columns[:-1])
 
 yHatTable = np.concatenate((X[crossValIndexes], linearEval['y'], linearEval['yHat'], ridgeEval['yHat'], lassoEval['yHat'],
-                            knnEval['yHat'], svrEval['yHat'], forestEval['yHat'], mlpEval['yHat']),
+                            lassoEval['yHat'], knnEval['yHat'], svrEval['yHat'], forestEval['yHat'], mlpEval['yHat']),
                            axis=1)
-dfColumnsExport = wavelengthColumns + ['Y', 'Linear', 'Ridge',
-                                       'Lasso', 'kNN', 'SVR', 'RF', 'MLP']
+dfColumnsExport = wavelengthColumns + ['Y', 'Linear', 'Ridge', 'Lasso',
+                                       'ElasticNet', 'kNN', 'SVR', 'RF', 'MLP']
 yHatDf = pd.DataFrame(yHatTable, columns=dfColumnsExport)
 yHatDf.to_csv('../results/modelTrained/completePredictions.csv',
               sep=';',
@@ -406,7 +367,7 @@ yHatDf.to_csv('../results/modelTrained/completePredictions.csv',
 indexColumns = ['modelName', 'R2', 'MSE', 'MAE']
 summaryDF = pd.DataFrame(
     np.asarray(list(map(lambda x: list(map(lambda index: x[index], indexColumns)),
-                        [linearEval, ridgeEval, lassoEval,
+                        [linearEval, ridgeEval, lassoEval, elasticNetEval,
                         knnEval, svrEval, forestEval, mlpEval]))),
     columns=indexColumns)
 summaryDF.to_csv('../results/modelTrained/summary.csv',
@@ -416,8 +377,8 @@ summaryDF.to_csv('../results/modelTrained/summary.csv',
 
 
 def plotAllGraphs():
-    models = ['Linear Reg', 'Lasso Reg',
-              'Ridge Reg', 'KNN', 'SVR', 'RF', 'MLP']
+    models = ['Linear Reg', 'Lasso Reg', 'Ridge Reg',
+              'ElasticNet', 'KNN', 'SVR', 'RF', 'MLP']
     for modelName in models:
         pathToModelData = f'../results/modelTrained/{modelName}'
         pathToPredictionFile = f'{pathToModelData}/predictions.csv'
@@ -430,62 +391,3 @@ def plotAllGraphs():
 
 
 plotAllGraphs()
-
-
-def yetToBeNamed(cvResults):
-
-    results_df = pd.DataFrame(cvResults.cv_results_)
-    results_df = results_df.sort_values(by=['rank_test_score'])
-    results_df = (
-        results_df
-        .set_index(results_df["params"].apply(
-            lambda x: "_".join(str(val) for val in x.values()))
-        )
-        .rename_axis('kernel')
-    )
-    results_df[
-        ['params', 'rank_test_score', 'mean_test_score', 'std_test_score']
-    ]
-
-    # create df of model scores ordered by perfomance
-    model_scores = results_df.filter(regex=r'split\d*_test_score')
-    cv = RepeatedKFold(
-        n_splits=10, n_repeats=10, random_state=0
-    )
-    # plot 30 examples of dependency between cv fold and AUC scores
-    sns.set_style('whitegrid')
-    fig, ax = plt.subplots()
-    sns.lineplot(
-        data=model_scores.transpose().iloc[:30],
-        dashes=False, palette='Set1', marker='o', alpha=.5, ax=ax
-    )
-    ax.set_xlabel("CV test fold", size=12, labelpad=10)
-    ax.set_ylabel("Model Neg Mean Squared Error", size=12)
-    ax.tick_params(bottom=True, labelbottom=False)
-    plt.show()
-
-    # print correlation of AUC scores across folds
-    print(f"Correlation of models:\n {model_scores.transpose().corr()}")
-
-    model_1_scores = model_scores.iloc[0].values  # scores of the best model
-    # scores of the second-best model
-    model_2_scores = model_scores.iloc[1].values
-
-    differences = model_1_scores - model_2_scores
-
-    n = differences.shape[0]  # number of test sets
-    df = n - 1
-    n_train = len(list(cv.split(X, Y))[0][0])
-    n_test = len(list(cv.split(X, Y))[0][1])
-
-    t_stat, p_val = compute_corrected_ttest(differences, df, n_train, n_test)
-    print(f"Corrected t-value: {t_stat:.3f}\n"
-          f"Corrected p-value: {p_val:.3f}")
-
-    t_stat_uncorrected = (
-        np.mean(differences) / np.sqrt(np.var(differences, ddof=1) / n)
-    )
-    p_val_uncorrected = t.sf(np.abs(t_stat_uncorrected), df)
-
-    print(f"Uncorrected t-value: {t_stat_uncorrected:.3f}\n"
-          f"Uncorrected p-value: {p_val_uncorrected:.3f}")
