@@ -1,6 +1,5 @@
 from scipy.stats.stats import mode
 
-
 import seaborn as sns
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import cross_validate
@@ -91,9 +90,9 @@ def executeExperiment():
     lasso = Lasso(alpha=0.00025, max_iter=1000)
     elasticNet = ElasticNet(alpha=0.00025, l1_ratio=1, max_iter=1000)
     knn = KNeighborsRegressor(n_neighbors=2, metric='minkowski')
-    forest = RandomForestRegressor(n_estimators=200, criterion='mae')
     svr = SVR(gamma=1, C=10, epsilon=0.01, kernel='rbf')
-    mlp = MLPRegressor(max_iter=1000, hidden_layer_sizes=(20, 15, 15, 10),
+    forest = RandomForestRegressor(n_estimators=50, criterion='mae')
+    mlp = MLPRegressor(max_iter=1600, hidden_layer_sizes=(20, 15, 15, 10),
                        activation='relu', alpha=0.01, learning_rate='constant',
                        learning_rate_init=0.001, batch_size=3, solver='adam')
 
@@ -134,6 +133,8 @@ Y = dataset['Porosity (%)'].values.astype(np.float64)
 
 mmY = MinMaxScaler()
 Y = mmY.fit_transform(Y.reshape(-1, 1)).ravel()
+
+executeExperiment()
 
 residual = pd.read_csv(
     RESIDUALS_FILE_NAME, sep=';', decimal='.')

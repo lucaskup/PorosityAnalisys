@@ -35,7 +35,9 @@ dataset = dataset.drop(['seq', 'sample', 'place'], axis=1)
 #                        visualSelection))) >= 1
 # columnsSelected = list(filter(isVisuallySelectedFeature, dataset.columns))
 
-visualSelection = ['382', '405.4', '486.3', '670', '970.3', '1005.4', '1412.8',
+# visualSelection = ['382', '405.4', '486.3', '670', '970.3', '1005.4', '1412.8',
+
+visualSelection = ['422.4', '486.3', '670', '970.3', '1005.4', '1412.8',
                    '1461.8', '1900.9', '1932.2', '2151.3', '2222.1', '2324.3']
 
 POROSITY_COLUMN_NAME = dataset.columns[-1]

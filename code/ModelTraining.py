@@ -293,19 +293,8 @@ gridParameters = {'hidden_layer_sizes': [(5, 5), (15, 10),
                   'learning_rate': ['constant', 'adaptive'],
                   'batch_size': [1, 2, 3],
                   'learning_rate_init': [0.01, 0.001],
-                  'early_stopping': [True, False]
+                  'early_stopping': [False]
                   }
-
-# gridParameters = {'hidden_layer_sizes': [(20, 15, 15, 10), (20, 15, 10), (20, 10)],
-#                  'max_iter': [1000, 1250, 1500, 1750],
-#                  'activation': ['relu'],
-#                  'solver': ['adam'],
-#                  'alpha': [0.001],
-#                  'learning_rate': ['adaptive'],
-#                  'batch_size': [2],
-#                  'learning_rate_init': [0.001],
-#                  'early_stopping': [False]
-#                  }
 findBestHyperparamsGridSearch(gridParameters, 'MLP', MLPRegressor())
 
 ###################################
@@ -326,7 +315,22 @@ lassoEval = evaluateModel(lasso, 'Lasso Reg', saveResultFiles=True)
 # ElasticNet
 elasticNet = ElasticNet(alpha=0.00025, l1_ratio=1, max_iter=1000)
 elasticNetEval = evaluateModel(elasticNet, 'ElasticNet', saveResultFiles=True)
-# elasticNetEval['estimator'][0].coef_
+
+important_coeficients = []
+coef = []
+for est in elasticNetEval['estimator']:
+    vec = np.vectorize(lambda x: 0 if x == 0 else 1)
+    print(vec(est.coef_))
+    coef.append(est.coef_)
+    important_coeficients.append(vec(est.coef_))
+important_coef_np = np.asfarray(important_coeficients)
+coef = np.asarray(coef)
+important_columns = vec(important_coef_np.sum(axis=0)).nonzero()[0]
+teste = coef[:, important_columns]
+
+plt.boxplot(teste[:, :])
+plt.show()
+dataset.columns[important_columns]
 
 # KNN Model Evaluation
 knn = KNeighborsRegressor(n_neighbors=2, metric='minkowski')
@@ -337,11 +341,11 @@ svr = SVR(gamma=1, C=10, epsilon=0.01, kernel='rbf')
 svrEval = evaluateModel(svr, 'SVR', saveResultFiles=True)
 
 # Random Forest
-forest = RandomForestRegressor(n_estimators=200, criterion='mae')
+forest = RandomForestRegressor(n_estimators=50, criterion='mae')
 forestEval = evaluateModel(forest, 'RF', saveResultFiles=True)
 
 # MLP Model Evaluation
-mlp = MLPRegressor(max_iter=1000, hidden_layer_sizes=(20, 15, 15, 10),
+mlp = MLPRegressor(max_iter=1600, hidden_layer_sizes=(20, 15, 15, 10),
                    activation='relu', alpha=0.01, learning_rate='constant',
                    learning_rate_init=0.001, batch_size=3, solver='adam')
 mlpEval = evaluateModel(mlp, 'MLP', saveResultFiles=True)
