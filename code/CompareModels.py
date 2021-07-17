@@ -138,9 +138,9 @@ executeExperiment()
 
 residual = pd.read_csv(
     RESIDUALS_FILE_NAME, sep=';', decimal='.')
-model_1_scores = residual['SVR'].values  # scores of the best model
+model_1_scores = residual['KNN'].values  # scores of the best model
 # scores of the second-best model
-model_2_scores = residual['KNN'].values
+model_2_scores = residual['ElasticNet'].values
 
 differences = model_1_scores - model_2_scores
 

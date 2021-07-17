@@ -1,8 +1,5 @@
-from scipy.stats.stats import mode
-import statsmodels.graphics.gofplots as sm
-import scipy.stats as sc
+from os import sep
 import seaborn as sns
-from sklearn.model_selection import GridSearchCV
 from pathlib import Path
 import pandas as pd
 import numpy as np
@@ -10,19 +7,13 @@ import copy
 from scipy.stats import t
 from sklearn.model_selection import RepeatedKFold
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import KFold
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.neighbors import KNeighborsRegressor
-from sklearn.linear_model import LinearRegression
 from sklearn.svm import SVR
 from sklearn.neural_network import MLPRegressor
-from sklearn.linear_model import Ridge
-from sklearn.linear_model import Lasso
-from sklearn.linear_model import ElasticNet
-from sklearn.metrics import mean_squared_error
-from sklearn.metrics import r2_score
-from sklearn.metrics import mean_absolute_error
-from sklearn.model_selection import cross_validate
+from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
+from sklearn.model_selection import cross_validate, KFold, GridSearchCV
 from joblib import dump, load
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -47,13 +38,24 @@ def getKfoldIndexes():
     return copy.deepcopy(kfold_indexes)
 
 
-def evaluateModel(model, modelName, saveResultFiles=False):
+def evaluate_model(model, model_name, save_results=False):
+    '''
+    Evaluates the model using LOOCV and creates a file with the results.
+
+            Parameters:
+                    model (sklearn.model): Sklearn model
+                    model_name (int): Name of the algorithm
+                    save_results (bool): save results to a file
+
+            Returns:
+                    scores (DataFrame): Results of LOOCV
+    '''
     # Setup directory to save results
     # Creates the directory to save the results
     pathToSaveModelEval = None
     pathToSaveModelsDump = None
-    if saveResultFiles:
-        pathToSaveModelEval = f'../results/modelTrained/{modelName}'
+    if save_results:
+        pathToSaveModelEval = f'../results/modelTrained/{model_name}'
         pathToSaveModelsDump = pathToSaveModelEval+'/trainedModels'
         Path(pathToSaveModelsDump).mkdir(parents=True, exist_ok=True)
 
@@ -63,10 +65,8 @@ def evaluateModel(model, modelName, saveResultFiles=False):
                             cv=getKfoldIndexes(),
                             scoring={'mse': 'neg_mean_squared_error'},
                             return_estimator=True)
-    yArray, yHatArray = computesYHat(
-        scores, pathToSaveModelsDump, modelName=modelName)
-    # generateGraphs(yArray, yHatArray, modelName,
-    #               pathToSaveModelEval=pathToSaveModelEval)
+    yArray, yHatArray = computes_YHat(
+        scores, pathToSaveModelsDump, model_name=model_name)
 
     predNPArray = np.concatenate((yArray, yHatArray),
                                  axis=1)
@@ -76,9 +76,9 @@ def evaluateModel(model, modelName, saveResultFiles=False):
                   sep=';',
                   decimal='.',
                   index=False)
-    r2Result, mseResult, maeResult = computeMetrics(yArray, yHatArray)
+    r2Result, mseResult, maeResult = compute_metrics(yArray, yHatArray)
 
-    textToPlot = f'{modelName}\n' \
+    textToPlot = f'{model_name}\n' \
         f'R2:  {r2Result:7.4f}\n' \
         f'MSE: {mseResult:7.4f}\n' \
         f'MAE: {maeResult:7.4f}'
@@ -87,17 +87,30 @@ def evaluateModel(model, modelName, saveResultFiles=False):
     scores['R2'] = r2Result
     scores['MSE'] = mseResult
     scores['MAE'] = maeResult
-    scores['modelName'] = modelName
+    scores['modelName'] = model_name
     print(textToPlot)
     return scores
 
 
-def computesYHat(crosValidScores, pathToSaveModelsDump=None, modelName=None):
-    # Uses all the estimators from LOOCV to make estimations
-    resultList = crosValidScores['estimator']
+def computes_YHat(cv_scores,
+                  path_to_save_models=None,
+                  model_name=None):
+    '''
+     Uses all the estimators from LOOCV to make yHat estimations
+
+            Parameters:
+                    cv_scores (DataFrame): The return from a cross validation
+                    path_to_save_models (String): Path to save model dump
+                    model_name (String): Name of the model
+
+            Returns:
+                     (str): Binary string of the sum of a and b
+    '''
+
+    resultList = cv_scores['estimator']
     cross_val_indexes = getKfoldIndexes()
-    listYhat = []
-    listY = []
+    y_hat = []
+    ground_truth = []
     # index of the for loop
     i = 0
     for est in resultList:
@@ -106,32 +119,58 @@ def computesYHat(crosValidScores, pathToSaveModelsDump=None, modelName=None):
             ground_truth = Y[x_temp]
             x_temp = X[x_temp]
             pred = est.predict(x_temp)
-            listYhat = listYhat + list(pred)
-            listY = listY + list(ground_truth.reshape(1, -1)[0])
+            y_hat = y_hat + list(pred)
+            ground_truth = ground_truth + list(ground_truth.reshape(1, -1)[0])
             dump(
-                est, f'{pathToSaveModelsDump}/{modelName}_LOOCV_FOLD_{i}.joblib')
+                est, f'{path_to_save_models}/{model_name}_LOOCV_FOLD_{i}.joblib')
         else:
             print('Problem in estimation')
         i = i + 1
-    listY = mmY.inverse_transform(np.asarray(listY).reshape(-1, 1))
-    listYhat = mmY.inverse_transform(np.asarray(listYhat).reshape(-1, 1))
-    return listY, listYhat
+    ground_truth = mmY.inverse_transform(
+        np.asarray(ground_truth).reshape(-1, 1))
+    y_hat = mmY.inverse_transform(np.asarray(y_hat).reshape(-1, 1))
+    return ground_truth, y_hat
 
 
-def computeMetrics(yArray, yHatArray):
-    maeResult = mean_absolute_error(yArray, yHatArray)
-    r2Result = r2_score(yArray, yHatArray)
-    mseResult = mean_squared_error(yArray, yHatArray)
-    return r2Result, mseResult, maeResult
+def compute_metrics(y_array, y_hat_array):
+    '''
+    Returns metrics for the estimations passed as arguments.
+
+            Parameters:
+                    y_array (NumpyArray): Ground Truth
+                    y_hat_array (NumpyArray): Model Estimations
+
+            Returns:
+                    (mae, r2, mse) (float, float, float): Metrics calculated
+    '''
+    mae = mean_absolute_error(y_array, y_hat_array)
+    r2 = r2_score(y_array, y_hat_array)
+    mse = mean_squared_error(y_array, y_hat_array)
+    return r2, mse, mae
 
 
-def generateGraphs(yArray, yHatArray, modelName, pathToSaveModelEval=None):
+def create_graphs(y_array, y_hat_array,
+                  model_name, path_save_evaluation=None):
+    '''
+    Creates scatter and residual plot of predictions passed in the
+    first two parameters.
+
+            Parameters:
+                    y_array (NumpyArray): Ground Truth value
+                    y_hat_array (NumpyArray): Estimated Values
+                    model_name (String): Name of the models
+                    path_save_evaluation (String): Path to save graphs and
+                    metrics
+
+            Returns:
+                    None
+    '''
     plt.clf()
     plt.style.use(['seaborn-ticks'])
     plt.figure(figsize=(6.5, 4.1))  # 4.75))
 
     # Plots the estimatives
-    plt.plot(yArray, yHatArray, "o")
+    plt.plot(y_array, y_hat_array, "o")
     # Plots a black line for comparation purpose
     _, xmax = plt.xlim()
     plt.plot([0, xmax], [0, xmax], 'k-')
@@ -140,182 +179,234 @@ def generateGraphs(yArray, yHatArray, modelName, pathToSaveModelEval=None):
 
     # Plots a linear fit between prediction and actual value
     linear = LinearRegression()
-    linear.fit(yArray, yHatArray)
-    plt.plot(yArray, linear.predict(yArray), '-', color='red')
+    linear.fit(y_array, y_hat_array)
+    plt.plot(y_array, linear.predict(y_array), '-', color='red')
 
-    r2Result, mseResult, maeResult = computeMetrics(yArray, yHatArray)
-    residualArray = yArray - yHatArray
+    r2, mse, mae = compute_metrics(y_array, y_hat_array)
+    residual_array = y_array - y_hat_array
 
-    textToPlot = f'R2:  {r2Result:7.4f}\n' \
-        f'MSE: {mseResult:7.4f}\n' \
-        f'MAE: {maeResult:7.4f}'
-    print(textToPlot)
+    text_to_plot = f'R2:  {r2:7.4f}\n' \
+        f'MSE: {mse:7.4f}\n' \
+        f'MAE: {mae:7.4f}'
+    print(text_to_plot)
     plt.text(0, ymax - yDistanceY0_yMax * 0.2,
-             textToPlot,
+             text_to_plot,
              bbox=dict(facecolor='gray', alpha=0.5),
              family='monospace')
     # plt.title(modelName)
     plt.grid(True)
     plt.xlabel('Laboratory Determined Porosity [%]')
-    plt.ylabel(modelName+' Estimated Porosity [%]')
+    plt.ylabel(model_name+' Estimated Porosity [%]')
 
-    if pathToSaveModelEval:
+    if path_save_evaluation:
         # Save Graph
-        nameInGraph = modelName.split(' ')[0]
-        plt.savefig(f'{pathToSaveModelEval}/scatterPlot{nameInGraph}.png',
+        name_in_graph = model_name.split(' ')[0]
+        plt.savefig(f'{path_save_evaluation}/scatterPlot{name_in_graph}.png',
                     bbox_inches='tight', pad_inches=0.01)
         # Save file metrics
-        with open(pathToSaveModelEval+'/metrics.txt', mode='w') as f:
-            f.write(f'R2: {r2Result}\n')
-            f.write(f'MAE: {maeResult}\n')
-            f.write(f'MSE: {mseResult}\n')
-            f.write(f'Residuals: {residualArray}\n')
-            f.write(f'Y: {yArray}\n')
-            f.write(f'YHat: {yHatArray}\n')
+        with open(f'{path_save_evaluation}/metrics.txt',
+                  mode='w') as f:
+            f.write(f'R2: {r2}\n')
+            f.write(f'MAE: {mae}\n')
+            f.write(f'MSE: {mse}\n')
+            f.write(f'Residuals: {residual_array}\n')
+            f.write(f'Y: {y_array}\n')
+            f.write(f'YHat: {y_hat_array}\n')
     plt.show()
-    residualPlot(modelName, residualArray, pathToSave=pathToSaveModelEval)
+    create_residual_plot(model_name, residual_array,
+                         path_to_save=path_save_evaluation)
 
 
-def residualPlot(modelName,
-                 residualList,
-                 pathToSave=None):
+def create_residual_plot(model_name,
+                         residual_list,
+                         path_to_save=None):
+    '''
+    Creates the residual plot histogram.
+
+            Parameters:
+                    model_name (String): Name of the model in the graph
+                    residual_list (NumpyArray): Residuals of the estimation
+                    path_to_save (String): Path to save the residuals graph
+
+            Returns:
+                    None
+    '''
     plt.clf()
     sns.set(style="ticks")
-    f, (ax_box, ax_hist) = plt.subplots(2, sharex=True,
+    _, (ax_box, ax_hist) = plt.subplots(2,
+                                        sharex=True,
                                         gridspec_kw={
                                             "height_ratios": (.15, .85)},
                                         figsize=(6.5, 4.1))
-    # figsize=(10, 7))
     ax_box.set_xlim((-15, 15))
     ax_hist.set_xlim((-15, 15))
-    ax_hist.set_ylim((0, 12))
-    ax_hist.set_xlabel(f'{modelName} Porosity Estimation Residual')
+    ax_hist.set_ylim((0, 13))
+    ax_hist.set_xlabel(f'{model_name} Porosity Estimation Residual')
     ax_hist.set_ylabel('Frequency')
     customBins = np.arange(-15.5, 15.5, 1)
-    # maxValueTicks = max(np.histogram(residualList, bins=customBins)[0]) + 1
-    ax_hist.set_yticks(np.arange(0, 13, 1))
+    ax_hist.set_yticks(np.arange(0, 14, 1))
     ax_hist.set_xticks(np.arange(-15, 16, 3))
-    sns.boxplot(x=residualList, ax=ax_box)
-    sns.histplot(data=residualList,
+    sns.boxplot(x=residual_list, ax=ax_box)
+    sns.histplot(data=residual_list,
                  bins=customBins,
                  kde=False, ax=ax_hist, legend=False, edgecolor="k", linewidth=1)
     ax_box.set(yticks=[])
-    # f.suptitle(f'{modelName} Residuals', fontsize=18)
     sns.despine(ax=ax_hist)
     sns.despine(ax=ax_box, left=True)
-    if pathToSave is not None:
-        nameInGraph = modelName.split(' ')[0]
-        plt.savefig(f'{pathToSave}/residualsPlot{nameInGraph}.png',
+    if path_to_save is not None:
+        name_in_graph = model_name.split(' ')[0]
+        plt.savefig(f'{path_to_save}/residualsPlot{name_in_graph}.png',
                     bbox_inches='tight', pad_inches=0.01)
     plt.show()
 
-# Grid Search for the best hyperparameters
 
+def grid_search_hyperparameters(grid_parameters, model_name, model, save_results=False):
+    '''
+    Does a 10 repetition 10-fold cross validation grid search to
+    select the best model in the parameter grid
 
-def findBestHyperparamsGridSearch(gridParameters, modelName, model):
+            Parameters:
+                    grid_parameters (Dictionary): Grid parameters to use
+                    in the model search
+                    model_name (String): Name of the model in the graph
+                    model (sklearn.model): Algorithm to use to train
+                    the model
+                    save_results (bool): Save LOOCV results to a file
+
+            Returns:
+                    best_params (Dictionary): Best parameters
+    '''
     cv = RepeatedKFold(
         n_splits=10, n_repeats=10, random_state=0
     )
     gsCV = GridSearchCV(model,
-                        gridParameters,
+                        grid_parameters,
                         cv=cv,
-                        n_jobs=-1)
+                        n_jobs=-1,
+                        scoring='neg_mean_squared_error')
     gsCV.fit(X, Y)
     results_df = pd.DataFrame(gsCV.cv_results_)
     results_df = results_df.sort_values(by=['rank_test_score'])
     results_df = (
         results_df
         .set_index(results_df["params"].apply(
-            lambda x: "_".join(str(val) for val in x.values()))
+            lambda x: "_".join(f'{key}:{val}' for key, val in x.items()))
         )
-        .rename_axis('kernel')
+        .rename_axis('model')
     )
     print(results_df[
-        ['params', 'rank_test_score', 'mean_test_score', 'std_test_score']
+        ['rank_test_score', 'mean_test_score', 'std_test_score']
     ])
+    if save_results:
+        results_df.to_csv(f'../results/modelTrained/{model_name}/GridSearchCV.csv',
+                          decimal='.',
+                          sep=';')
 
     print(
-        f'Best {modelName}:\n   Score > {gsCV.best_score_}\n   Params > {gsCV.best_params_}')
+        f'Best {model_name}:\n   Score > {gsCV.best_score_}\n   Params > {gsCV.best_params_}')
+    return gsCV.best_params_
 
 
 # Lasso
-gridParameters = {'alpha': [0.1, 0.01, 0.001, 0.0005, 0.00025, 0.0001, 0.00005],
-                  'max_iter': [100, 1000, 10000, 100000]}
-findBestHyperparamsGridSearch(gridParameters, 'Lasso Reg', Lasso())
+grid_parameters = {'alpha': [0.1, 0.01, 0.001, 0.0005, 0.00025, 0.0001, 0.00005],
+                   'max_iter': [100, 1000, 10000, 100000]}
+grid_search_hyperparameters(grid_parameters,
+                            'Lasso Reg',
+                            Lasso(),
+                            save_results=True)
 # Ridge
-gridParameters = {'alpha': [0.1, 0.01, 0.001, 0.0005, 0.00025, 0.0001, 0.00005],
-                  'max_iter': [100, 1000, 10000, 100000]}
-findBestHyperparamsGridSearch(gridParameters, 'Ridge Reg', Ridge())
+grid_parameters = {'alpha': [0.1, 0.01, 0.001, 0.0005, 0.00025, 0.0001, 0.00005],
+                   'max_iter': [100, 1000, 10000, 100000]}
+grid_search_hyperparameters(grid_parameters,
+                            'Ridge Reg',
+                            Ridge(),
+                            save_results=True)
 
 # ElasticNet
 
-gridParameters = {'alpha': [0.1, 0.01, 0.001, 0.0005, 0.00025, 0.0001, 0.00005],
-                  'l1_ratio': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
-                  'max_iter': [100, 1000, 10000, 100000]}
-findBestHyperparamsGridSearch(gridParameters, 'ElasticNet', ElasticNet())
+grid_parameters = {'alpha': [0.1, 0.01, 0.001, 0.0005, 0.00025, 0.0001, 0.00005],
+                   'l1_ratio': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+                   'max_iter': [100, 1000, 10000, 100000]}
+grid_search_hyperparameters(grid_parameters,
+                            'ElasticNet',
+                            ElasticNet(),
+                            save_results=True)
 
 
 # kNN
 covParam = np.cov(X.astype(np.float32))
 invCovParam = np.linalg.pinv(covParam)
-gridParameters = [{'algorithm': ['auto'],
-                  'metric': ['minkowski'],
+grid_parameters = [{'algorithm': ['auto'],
+                    'metric': ['minkowski'],
                    'n_neighbors': [1, 2, 3, 4, 5]},
-                  {'algorithm': ['brute'],
+                   {'algorithm': ['brute'],
                    'metric': ['mahalanobis'],
-                   'n_neighbors': [1, 2, 3, 4, 5],
-                   'metric_params': [{'V': covParam,
+                    'n_neighbors': [1, 2, 3, 4, 5],
+                    'metric_params': [{'V': covParam,
                                       'VI': invCovParam}]}]
-findBestHyperparamsGridSearch(gridParameters, 'kNN', KNeighborsRegressor())
+grid_search_hyperparameters(grid_parameters,
+                            'KNN',
+                            KNeighborsRegressor(),
+                            save_results=True)
 
 # SVR Model
-gridParameters = {'C': [0.1, 1, 10, 100, 1000],
-                  'gamma': ['auto', 5, 1, 0.1, 0.01, 0.001, 0.0001],
-                  'kernel': ['rbf'],
-                  'epsilon': [0.1, 0.01, 0.05]}
-findBestHyperparamsGridSearch(gridParameters, 'SVR', SVR())
+grid_parameters = {'C': [0.1, 1, 10, 100, 1000],
+                   'gamma': ['auto', 5, 1, 0.1, 0.01, 0.001, 0.0001],
+                   'kernel': ['rbf'],
+                   'epsilon': [0.1, 0.01, 0.05]}
+grid_search_hyperparameters(grid_parameters,
+                            'SVR',
+                            SVR(),
+                            save_results=True)
 
 # RF
 
-gridParameters = {'n_estimators': [10, 50, 100, 200, 500],
-                  'criterion': ['mse', 'mae']}
-findBestHyperparamsGridSearch(gridParameters, 'RF', RandomForestRegressor())
+grid_parameters = {'n_estimators': [10, 50, 100, 200, 500],
+                   'criterion': ['mse', 'mae']}
+grid_search_hyperparameters(grid_parameters,
+                            'RF',
+                            RandomForestRegressor(),
+                            save_results=True)
 
 # sorted(sklearn.metrics.SCORERS.keys())
 # MLP
-gridParameters = {'hidden_layer_sizes': [(5, 5), (15, 10),
-                                         (20, 15, 10),
-                                         (20, 15, 15, 10)],
-                  'activation': ['relu'],
-                  'solver': ['adam'],
-                  'max_iter': [500, 1000, 1250, 1600],
-                  'alpha': [0.01, 0.001, 0.0001],
-                  'learning_rate': ['constant', 'adaptive'],
-                  'batch_size': [1, 2, 3],
-                  'learning_rate_init': [0.01, 0.001],
-                  'early_stopping': [False]
-                  }
-findBestHyperparamsGridSearch(gridParameters, 'MLP', MLPRegressor())
+grid_parameters = {'hidden_layer_sizes': [(5, 5), (15, 10),
+                                          (20, 15, 10),
+                                          (20, 15, 15, 10)],
+                   'activation': ['relu'],
+                   'solver': ['adam'],
+                   'max_iter': [1000, 1250, 1600, 2000],
+                   'alpha': [0.01, 0.001, 0.0001],
+                   'learning_rate': ['constant', 'adaptive'],
+                   'batch_size': [1, 2, 3],
+                   'learning_rate_init': [0.01, 0.001],
+                   'early_stopping': [False]
+                   }
+grid_search_hyperparameters(grid_parameters,
+                            'MLP',
+                            MLPRegressor(),
+                            save_results=True)
 
 ###################################
 # Training and evaluation of models
 
 # Linear Regression
 linear = LinearRegression()
-linearEval = evaluateModel(linear, 'Linear Reg', saveResultFiles=True)
+linearEval = evaluate_model(linear, 'Linear Reg', save_results=True)
 
 # Ridge Regression
 ridge = Ridge(alpha=0.1, max_iter=100)
-ridgeEval = evaluateModel(ridge, 'Ridge Reg', saveResultFiles=True)
+ridgeEval = evaluate_model(ridge, 'Ridge Reg', save_results=True)
 
 # Lasso Regression
 lasso = Lasso(alpha=0.00025, max_iter=1000)
-lassoEval = evaluateModel(lasso, 'Lasso Reg', saveResultFiles=True)
+lassoEval = evaluate_model(lasso, 'Lasso Reg', save_results=True)
 
 # ElasticNet
 elasticNet = ElasticNet(alpha=0.00025, l1_ratio=1, max_iter=1000)
-elasticNetEval = evaluateModel(elasticNet, 'ElasticNet', saveResultFiles=True)
+elasticNetEval = evaluate_model(elasticNet, 'ElasticNet', save_results=True)
 
+'''
 important_coeficients = []
 coef = []
 for est in elasticNetEval['estimator']:
@@ -331,24 +422,35 @@ teste = coef[:, important_columns]
 plt.boxplot(teste[:, :])
 plt.show()
 dataset.columns[important_columns]
+'''
 
 # KNN Model Evaluation
-knn = KNeighborsRegressor(n_neighbors=2, metric='minkowski')
-knnEval = evaluateModel(knn, 'KNN', saveResultFiles=True)
+knn = KNeighborsRegressor(n_neighbors=2,
+                          metric='minkowski')
+knnEval = evaluate_model(knn, 'KNN', save_results=True)
 
 # SVR Model Evaluation
-svr = SVR(gamma=1, C=10, epsilon=0.01, kernel='rbf')
-svrEval = evaluateModel(svr, 'SVR', saveResultFiles=True)
+svr = SVR(gamma=5,
+          C=10,
+          epsilon=0.01,
+          kernel='rbf')
+svrEval = evaluate_model(svr, 'SVR', save_results=True)
 
 # Random Forest
-forest = RandomForestRegressor(n_estimators=50, criterion='mae')
-forestEval = evaluateModel(forest, 'RF', saveResultFiles=True)
+forest = RandomForestRegressor(n_estimators=500,
+                               criterion='mae')
+forestEval = evaluate_model(forest, 'RF', save_results=True)
 
 # MLP Model Evaluation
-mlp = MLPRegressor(max_iter=1600, hidden_layer_sizes=(20, 15, 15, 10),
-                   activation='relu', alpha=0.01, learning_rate='constant',
-                   learning_rate_init=0.001, batch_size=3, solver='adam')
-mlpEval = evaluateModel(mlp, 'MLP', saveResultFiles=True)
+mlp = MLPRegressor(max_iter=1600,
+                   hidden_layer_sizes=(20, 15, 15, 10),
+                   activation='relu',
+                   alpha=0.01,
+                   learning_rate='constant',
+                   learning_rate_init=0.001,
+                   batch_size=3,
+                   solver='adam')
+mlpEval = evaluate_model(mlp, 'MLP', save_results=True)
 
 
 # Compile all the predictions in the same CSV file
@@ -380,18 +482,18 @@ summaryDF.to_csv('../results/modelTrained/summary.csv',
                  index=False)
 
 
-def plotAllGraphs():
+def plot_results():
     models = ['Linear Reg', 'Lasso Reg', 'Ridge Reg',
               'ElasticNet', 'KNN', 'SVR', 'RF', 'MLP']
-    for modelName in models:
-        pathToModelData = f'../results/modelTrained/{modelName}'
-        pathToPredictionFile = f'{pathToModelData}/predictions.csv'
-        predictionData = pd.read_csv(
-            pathToPredictionFile, decimal='.', sep=';')
-        yArray = predictionData['Y'].values.reshape(-1, 1)
-        yHatArray = predictionData['YHat'].values.reshape(-1, 1)
-        generateGraphs(yArray, yHatArray, modelName,
-                       pathToSaveModelEval=pathToModelData)
+    for model_name in models:
+        path_model_data = f'../results/modelTrained/{model_name}'
+        path_prediction_file = f'{path_model_data}/predictions.csv'
+        df_prediction_data = pd.read_csv(
+            path_prediction_file, decimal='.', sep=';')
+        yArray = df_prediction_data['Y'].values.reshape(-1, 1)
+        yHatArray = df_prediction_data['YHat'].values.reshape(-1, 1)
+        create_graphs(yArray, yHatArray, model_name,
+                      path_save_evaluation=path_model_data)
 
 
-plotAllGraphs()
+plot_results()
