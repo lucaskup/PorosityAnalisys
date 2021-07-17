@@ -104,13 +104,13 @@ def computes_YHat(cv_scores,
                     model_name (String): Name of the model
 
             Returns:
-                     (str): Binary string of the sum of a and b
+                    y, y_hat (NumpyArray, NumpyArray): Ground Truth and Prediction
     '''
 
     resultList = cv_scores['estimator']
     cross_val_indexes = getKfoldIndexes()
     y_hat = []
-    ground_truth = []
+    y = []
     # index of the for loop
     i = 0
     for est in resultList:
@@ -120,16 +120,16 @@ def computes_YHat(cv_scores,
             x_temp = X[x_temp]
             pred = est.predict(x_temp)
             y_hat = y_hat + list(pred)
-            ground_truth = ground_truth + list(ground_truth.reshape(1, -1)[0])
+            y = y + list(ground_truth.reshape(1, -1)[0])
             dump(
                 est, f'{path_to_save_models}/{model_name}_LOOCV_FOLD_{i}.joblib')
         else:
             print('Problem in estimation')
         i = i + 1
-    ground_truth = mmY.inverse_transform(
-        np.asarray(ground_truth).reshape(-1, 1))
+    y = mmY.inverse_transform(
+        np.asarray(y).reshape(-1, 1))
     y_hat = mmY.inverse_transform(np.asarray(y_hat).reshape(-1, 1))
-    return ground_truth, y_hat
+    return y, y_hat
 
 
 def compute_metrics(y_array, y_hat_array):
@@ -298,9 +298,10 @@ def grid_search_hyperparameters(grid_parameters, model_name, model, save_results
         ['rank_test_score', 'mean_test_score', 'std_test_score']
     ])
     if save_results:
-        results_df.to_csv(f'../results/modelTrained/{model_name}/GridSearchCV.csv',
-                          decimal='.',
-                          sep=';')
+        results_df.drop('params',
+                        axis=1).to_csv(f'../results/modelTrained/{model_name}/GridSearchCV.csv',
+                                       decimal='.',
+                                       sep=';')
 
     print(
         f'Best {model_name}:\n   Score > {gsCV.best_score_}\n   Params > {gsCV.best_params_}')
@@ -372,10 +373,12 @@ grid_search_hyperparameters(grid_parameters,
 # MLP
 grid_parameters = {'hidden_layer_sizes': [(5, 5), (15, 10),
                                           (20, 15, 10),
-                                          (20, 15, 15, 10)],
+                                          (20, 15, 15, 10),
+                                          (10, 5, 5, 5),
+                                          (20, 15, 10, 5)],
                    'activation': ['relu'],
                    'solver': ['adam'],
-                   'max_iter': [1000, 1250, 1600, 2000],
+                   'max_iter': [1250, 1600, 2000, 2500, 3000],
                    'alpha': [0.01, 0.001, 0.0001],
                    'learning_rate': ['constant', 'adaptive'],
                    'batch_size': [1, 2, 3],
@@ -442,11 +445,11 @@ forest = RandomForestRegressor(n_estimators=500,
 forestEval = evaluate_model(forest, 'RF', save_results=True)
 
 # MLP Model Evaluation
-mlp = MLPRegressor(max_iter=1600,
+mlp = MLPRegressor(max_iter=3000,
                    hidden_layer_sizes=(20, 15, 15, 10),
                    activation='relu',
-                   alpha=0.01,
-                   learning_rate='constant',
+                   alpha=0.001,
+                   learning_rate='adaptive',
                    learning_rate_init=0.001,
                    batch_size=3,
                    solver='adam')
