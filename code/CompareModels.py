@@ -1,7 +1,3 @@
-from scipy.stats.stats import mode
-
-import seaborn as sns
-from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import cross_validate
 
 import pandas as pd
@@ -20,9 +16,6 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.neural_network import MLPRegressor
 
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics import mean_squared_error
-from sklearn.metrics import r2_score
-from sklearn.metrics import mean_absolute_error
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -84,40 +77,45 @@ def compute_corrected_ttest(differences, df, n_train, n_test):
     return t_stat, p_val
 
 
-def executeExperiment():
+def execute_experiment():
     linear = LinearRegression()
     ridge = Ridge(alpha=0.1, max_iter=100)
     lasso = Lasso(alpha=0.00025, max_iter=1000)
     elasticNet = ElasticNet(alpha=0.00025, l1_ratio=1, max_iter=1000)
     knn = KNeighborsRegressor(n_neighbors=2, metric='minkowski')
-    svr = SVR(gamma=1, C=10, epsilon=0.01, kernel='rbf')
-    forest = RandomForestRegressor(n_estimators=50, criterion='mae')
-    mlp = MLPRegressor(max_iter=1600, hidden_layer_sizes=(20, 15, 15, 10),
-                       activation='relu', alpha=0.01, learning_rate='constant',
-                       learning_rate_init=0.001, batch_size=3, solver='adam')
+    svr = SVR(gamma=5, C=10, epsilon=0.01, kernel='rbf')
+    forest = RandomForestRegressor(n_estimators=500, criterion='mae')
+    mlp = MLPRegressor(max_iter=3000, hidden_layer_sizes=(20, 15, 15, 10),
+                       activation='relu', alpha=0.001,
+                       learning_rate='adaptive', learning_rate_init=0.001,
+                       batch_size=3, solver='adam')
 
-    results = list(map(lambda model: cross_validate(model, X, y=Y, cv=cv,
+    results = list(map(lambda model: cross_validate(model,
+                                                    X,
+                                                    y=Y,
+                                                    cv=cv,
                                                     scoring='neg_mean_squared_error'),
                        [linear, ridge, lasso, elasticNet, knn, forest, svr, mlp]))
-    boxplotData = list(map(lambda x: x['test_score'], results))
+    boxplot_data = list(map(lambda x: x['test_score'], results))
 
-    plt.boxplot(boxplotData)
+    plt.boxplot(boxplot_data)
     plt.show()
 
-    linearResults, ridgeResults, lassoResults, elasticNetResults, \
-        knnResults, forestResults, svrResults, mlpResults = boxplotData
+    linear_results, ridge_results, lasso_results, \
+        elasticnet_results, knn_results, forest_results, \
+        svr_results, mlp_results = boxplot_data
 
-    residualsDF = pd.DataFrame({'Linear': linearResults,
-                                'Lasso': lassoResults,
-                                'Ridge': ridgeResults,
-                                'ElasticNet': elasticNetResults,
-                                'KNN': knnResults,
-                                'RF': forestResults,
-                                'SVR': svrResults,
-                                'MLP': mlpResults})
+    residuals_df = pd.DataFrame({'Linear': linear_results,
+                                'Lasso': lasso_results,
+                                 'Ridge': ridge_results,
+                                 'ElasticNet': elasticnet_results,
+                                 'KNN': knn_results,
+                                 'RF': forest_results,
+                                 'SVR': svr_results,
+                                 'MLP': mlp_results})
 
-    residualsDF.to_csv(RESIDUALS_FILE_NAME,
-                       sep=';', decimal='.')
+    residuals_df.to_csv(RESIDUALS_FILE_NAME,
+                        sep=';', decimal='.')
 
 
 # Import the data
@@ -134,11 +132,11 @@ Y = dataset['Porosity (%)'].values.astype(np.float64)
 mmY = MinMaxScaler()
 Y = mmY.fit_transform(Y.reshape(-1, 1)).ravel()
 
-executeExperiment()
+# execute_experiment()
 
 residual = pd.read_csv(
     RESIDUALS_FILE_NAME, sep=';', decimal='.')
-model_1_scores = residual['KNN'].values  # scores of the best model
+model_1_scores = residual['SVR'].values  # scores of the best model
 # scores of the second-best model
 model_2_scores = residual['ElasticNet'].values
 

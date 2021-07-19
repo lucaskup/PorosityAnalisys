@@ -1,4 +1,3 @@
-from os import sep
 import seaborn as sns
 from pathlib import Path
 import pandas as pd
