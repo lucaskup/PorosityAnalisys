@@ -14,19 +14,29 @@ This repository provides the code, data and the results used to estimate the por
     numpy
     scikit-learn
 
-## Usage
+### Folder Structure
 
-In the code folder you will find .py files with the implementation used in this study.
-\code
-+--*compare_models.py* => Implements a variance corrected t-test to evaluate if the difference in the models is statistically significant;
-+--*correlation_matrix.py* => Auxiliary function to plot a correlation matrix;
-+--*feature_selection.py* => Implements the feature selection phase of the methodology described in the paper;
-+--*model_training.py* => Implements model training and hyperparameter tuning considering the feature selected dataset;
-+--*plot_correlation_matrix.py* => Implements the printing of the correlation matrix and correlation plot that are found in the draft submited to Computers and Geosciences.
 
-\data => contains the dataset used in the research
+### A typical top-level directory layout
 
-\results => contains plots, graphs, csv files and metrics obtained by executing the scripts under \code directory
+    .
+    ├── build                   # Compiled files (alternatively `dist`)
+    ├── docs                    # Documentation files (alternatively `doc`)
+    ├── src                     # Source files (alternatively `lib` or `app`)
+    ├── test                    # Automated tests (alternatively `spec` or `tests`)
+    ├── tools                   # Tools and utilities
+    ├── LICENSE
+    └── README.md
+    In the code folder you will find .py files with the implementation used in this study.
+    .
+    ├── code
+        ├── *compare_models.py* # Implements a variance corrected t-test to evaluate if the difference in the models is statistically significant;
+        ├──*correlation_matrix.py* # Auxiliary function to plot a correlation matrix;
+        ├──*feature_selection.py*  # Implements the feature selection phase of the methodology described in the paper;
+        ├──*model_training.py* # Implements model training and hyperparameter tuning considering the feature selected dataset;
+        ├──*plot_correlation_matrix.py*  # Implements the printing of the correlation matrix and correlation plot that are found in the draft submited to Computers and Geosciences.
+    ├── data  # contains the dataset used in the research
+    ├── results # contains plots, graphs, csv files and metrics obtained by executing the scripts under \code directory
 
 ## How to cite
 
