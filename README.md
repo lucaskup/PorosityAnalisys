@@ -16,8 +16,6 @@ This repository provides the code, data and the results used to estimate the por
 
 ### Folder Structure
 
-
-### A typical top-level directory layout
     In the code folder you will find .py files with the implementation used in this study.
     .
     ├── code
