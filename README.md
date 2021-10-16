@@ -19,13 +19,13 @@ This repository provides the code, data and the results used to estimate the por
     In the code folder you will find .py files with the implementation used in this study.
     .
     ├── code
-        ├──compare_models.py             # Variance corrected t-test to evaluate the residuals;
+        ├──compare_models.py              # Variance corrected t-test to evaluate the residuals;
         ├──correlation_matrix.py          # Auxiliary function to plot a correlation matrix;
         ├──feature_selection.py           # Feature selection phase of the methodology described in the paper;
         ├──model_training.py              # Model training and hyperparameter tuning considering the feature selected dataset;
         ├──plot_correlation_matrix.py     # Printing of the correlation matrix and correlation plot .
-    ├── data                                # Dataset used in the research
-    ├── results                             # contains plots, saved models and metrics obtained as results.
+    ├── data                              # Dataset used in the research
+    ├── results                           # contains plots, saved models and metrics obtained as results.
     └── README.md
     
 ## How to cite
