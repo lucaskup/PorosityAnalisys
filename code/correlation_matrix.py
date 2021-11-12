@@ -40,9 +40,7 @@ def plot_correlation_matrix(df, annotate_cells=True, file_name=None):
         ax.set_xticklabels(tick_labels, fontsize=15)
         ax.set_yticks(ticks)
         ax.set_yticklabels(tick_labels, fontsize=15)
-    ax_lab.set_xticklabels(['-1.00', '-0.75', '-0.50', '-0.25',
-                           '0.00', '0.25', '0.50', '0.75', '1.00'], fontsize=13)
-
+    #f.colorbar(im, cax=cax, orientation='vertical')
     if file_name is not None:
         plt.savefig(file_name, dpi=450)
 

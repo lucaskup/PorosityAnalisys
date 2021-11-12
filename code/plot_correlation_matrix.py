@@ -5,9 +5,9 @@ import numpy as np
 from correlation_matrix import plot_correlation_matrix
 
 
-dataset = pd.read_csv(f'../data/data.csv',
+dataset = pd.read_csv(f'../data/more_data.csv',
                       sep=';',
-                      decimal=',')
+                      decimal='.')
 
 # Plots the correlation matrix as a heatmap of all the features
 POROSITY_COLUMN_NAME = dataset.columns[-1]
@@ -19,6 +19,8 @@ plot_correlation_matrix(dataset[DATASET_COLUMNS[:-2]],
                         annotate_cells=False,
                         file_name=filePathAndName)
 
+plt.clf()
+plt.figure(figsize=(10, 6))
 # Plots the correlation graph between porosity and wavelengths
 partial_correlation_matrix = dataset[DATASET_COLUMNS].corr()
 x_graph_labels = np.asarray(DATASET_COLUMNS[:-1])
