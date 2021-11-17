@@ -1,3 +1,4 @@
+# %%
 import seaborn as sns
 from pathlib import Path
 import pandas as pd
@@ -6,6 +7,7 @@ import copy
 from scipy.stats import t
 from sklearn.model_selection import cross_validate, KFold, GridSearchCV, GroupKFold, RepeatedKFold
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.ensemble import GradientBoostingRegressor
@@ -19,24 +21,33 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 mpl.rcParams['figure.dpi'] = 400
 
+# %%
+EXPERIMENT = 2
+EXPERIMENT_PATH = 'exp_1_effective_porosity' if EXPERIMENT == 1 else 'exp_2_total_porosity'
+DATA_FILE = f'../results/{EXPERIMENT_PATH}/feature_selection/feature_selected_data.csv'
+PATH_SAVE_FILES = f'../results/{EXPERIMENT_PATH}/model_trained/'
+# %%
 # Import the data
-dataset = pd.read_csv('../results/featureSelection/featureSelectedData.csv',
-                      index_col=0)
-
-X = dataset.values[:, 1:-1].astype(np.float64)
-groups = dataset.values[:, 0].astype(np.str)
+dataset = pd.read_csv(DATA_FILE, index_col=0)
+dataset.describe()
+# %%
+X = dataset.values[:, :-1].astype(np.float64)
+#groups = dataset.values[:, 0].astype(np.str)
 Y = dataset['Porosity (%)'].values.astype(np.float64)
-
-mmY = MinMaxScaler()
-Y = mmY.fit_transform(Y.reshape(-1, 1)).ravel()
-
+# %%
+scX = StandardScaler()
+X = scX.fit_transform(X)
+#mmY = MinMaxScaler()
+# Y = mmY.fit_transform(Y.reshape(-1, 1)).ravel()
+# %%
 # Auxiliary Functions
-n_split = 10  # len(X)
-kfold_indexes = list(GroupKFold(n_split).split(X, groups=groups))
+n_split = len(X)
+kfold_indexes = list(KFold(n_split).split(X))
 
 
 def getKfoldIndexes():
     return copy.deepcopy(kfold_indexes)
+# %%
 
 
 def evaluate_model(model, model_name, save_results=False):
@@ -56,7 +67,7 @@ def evaluate_model(model, model_name, save_results=False):
     pathToSaveModelEval = None
     pathToSaveModelsDump = None
     if save_results:
-        pathToSaveModelEval = f'../results/modelTrained/{model_name}'
+        pathToSaveModelEval = f'{PATH_SAVE_FILES}{model_name}'
         pathToSaveModelsDump = pathToSaveModelEval+'/trainedModels'
         Path(pathToSaveModelsDump).mkdir(parents=True, exist_ok=True)
 
@@ -91,6 +102,7 @@ def evaluate_model(model, model_name, save_results=False):
     scores['modelName'] = model_name
     print(textToPlot)
     return scores
+# %%
 
 
 def computes_YHat(cv_scores,
@@ -131,6 +143,7 @@ def computes_YHat(cv_scores,
         np.asarray(y).reshape(-1, 1))
     y_hat = mmY.inverse_transform(np.asarray(y_hat).reshape(-1, 1))
     return y, y_hat
+# %%
 
 
 def compute_metrics(y_array, y_hat_array):
@@ -148,6 +161,7 @@ def compute_metrics(y_array, y_hat_array):
     r2 = r2_score(y_array, y_hat_array)
     mse = mean_squared_error(y_array, y_hat_array)
     return r2, mse, mae
+# %%
 
 
 def create_graphs(y_array, y_hat_array,
@@ -216,6 +230,7 @@ def create_graphs(y_array, y_hat_array,
     plt.show()
     create_residual_plot(model_name, residual_array,
                          path_to_save=path_save_evaluation)
+# %%
 
 
 def create_residual_plot(model_name,
@@ -259,6 +274,7 @@ def create_residual_plot(model_name,
         plt.savefig(f'{path_to_save}/residualsPlot{name_in_graph}.png',
                     bbox_inches='tight', pad_inches=0.01)
     plt.show()
+# %%
 
 
 def grid_search_hyperparameters(grid_parameters, model_name, model, save_results=False):
@@ -309,6 +325,7 @@ def grid_search_hyperparameters(grid_parameters, model_name, model, save_results
     return gsCV.best_params_
 
 
+# %%
 # Lasso
 grid_parameters = {'alpha': [0.1, 0.01, 0.001, 0.0005, 0.00025, 0.0001, 0.00005],
                    'max_iter': [100, 1000, 10000, 100000]}
@@ -316,6 +333,10 @@ grid_search_hyperparameters(grid_parameters,
                             'Lasso Reg',
                             Lasso(),
                             save_results=True)
+# Best Lasso Reg Exp 2:
+#   Score > -0.028510619749006105
+#   Params > {'alpha': 0.01, 'max_iter': 1000}
+# %%
 # Ridge
 grid_parameters = {'alpha': [0.1, 0.01, 0.001, 0.0005, 0.00025, 0.0001, 0.00005],
                    'max_iter': [100, 1000, 10000, 100000]}
@@ -323,9 +344,11 @@ grid_search_hyperparameters(grid_parameters,
                             'Ridge Reg',
                             Ridge(),
                             save_results=True)
-
+# Best Ridge Reg Exp 2:
+#   Score > -0.028032751218368276
+#   Params > {'alpha': 0.1, 'max_iter': 100}
+# %%
 # ElasticNet
-
 grid_parameters = {'alpha': [0.1, 0.01, 0.001, 0.0005, 0.00025, 0.0001, 0.00005],
                    'l1_ratio': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
                    'max_iter': [100, 1000, 10000, 100000]}
@@ -333,8 +356,11 @@ grid_search_hyperparameters(grid_parameters,
                             'ElasticNet',
                             ElasticNet(),
                             save_results=True)
+# Best ElasticNet Exp 2:
+#   Score > -0.02851035391617089
+#   Params > {'alpha': 0.1, 'l1_ratio': 0.1, 'max_iter': 100}
 
-
+# %%
 # kNN
 covParam = np.cov(X.astype(np.float32))
 invCovParam = np.linalg.pinv(covParam)
@@ -351,6 +377,11 @@ grid_search_hyperparameters(grid_parameters,
                             KNeighborsRegressor(),
                             save_results=True)
 
+# Best KNN Exp 2:
+#   Score > -0.032380102023518716
+#   Params > {'algorithm': 'auto', 'metric': 'minkowski', 'n_neighbors': 4}
+
+# %%
 # SVR Model
 grid_parameters = {'C': [0.1, 1, 10, 50],
                    'gamma': ['auto', 5, 1, 0.1, 0.01, 0.001, 0.0001],
@@ -360,16 +391,22 @@ grid_search_hyperparameters(grid_parameters,
                             'SVR',
                             SVR(),
                             save_results=True)
-
+# Best SVR Exp 2:
+#   Score > -0.026325756186553903
+#   Params > {'C': 1, 'epsilon': 0.01, 'gamma': 1, 'kernel': 'rbf'}
+# %%
 # RF
 grid_parameters = {'n_estimators': [10, 50, 100, 200, 500],
-                   'criterion': ['mse', 'mae']}
+                   'criterion': ['mse', 'absolute_error']}
 grid_search_hyperparameters(grid_parameters,
                             'RF',
                             RandomForestRegressor(),
                             save_results=True)
+# Best RF Exp 2:
+#   Score > -0.02149990022206059
+#   Params > {'criterion': 'absolute_error', 'n_estimators': 500}
 
-
+# %%
 # xGB
 
 grid_parameters = {'learning_rate': [0.1, 0.05, 0.01],
@@ -379,12 +416,15 @@ grid_search_hyperparameters(grid_parameters,
                             'GBoost',
                             GradientBoostingRegressor(),
                             save_results=True)
-
+# Best GBoost EXP 2:
+#   Score > -0.01988859338660524
+#   Params > {'ccp_alpha': 0, 'learning_rate': 0.01, 'n_estimators': 50}
+# %%
 
 # sorted(sklearn.metrics.SCORERS.keys())
 # MLP
-grid_parameters = {'hidden_layer_sizes': [(16, 16), (32, 16),
-                                          (32, 32, 32),
+grid_parameters = {'hidden_layer_sizes': [(32, 32), (64, 64),
+                                          (64, 32, 32),
                                           (32, 32, 16, 16)],
                    'activation': ['relu'],
                    'solver': ['adam'],
@@ -393,13 +433,17 @@ grid_parameters = {'hidden_layer_sizes': [(16, 16), (32, 16),
                    'learning_rate': ['constant', 'adaptive'],
                    'batch_size': [1, 2, 4],
                    'learning_rate_init': [0.01, 0.001],
-                   'early_stopping': [True, False]
+                   'early_stopping': [False]
                    }
 grid_search_hyperparameters(grid_parameters,
                             'MLP',
                             MLPRegressor(),
                             save_results=True)
 
+# Best MLP Exp 2:
+#Score > -0.03973070660824823
+#Params > {'activation': 'relu', 'alpha': 0.0001, 'batch_size': 4, 'early_stopping': False, 'hidden_layer_sizes': (32, 32, 32), 'learning_rate': 'adaptive', 'learning_rate_init': 0.001, 'max_iter': 2000, 'solver': 'adam'}
+# %%
 ###################################
 # Training and evaluation of models
 
@@ -407,16 +451,21 @@ grid_search_hyperparameters(grid_parameters,
 linear = LinearRegression()
 linearEval = evaluate_model(linear, 'Linear Reg', save_results=True)
 
+# %%
 # Ridge Regression
+#{'alpha': 0.0001, 'max_iter': 100}
 ridge = Ridge(alpha=0.0001, max_iter=100)
 ridgeEval = evaluate_model(ridge, 'Ridge Reg', save_results=True)
 
+# %%
 # Lasso Regression
+#{'alpha': 5e-05, 'max_iter': 100}
 lasso = Lasso(alpha=0.00005, max_iter=100)
 lassoEval = evaluate_model(lasso, 'Lasso Reg', save_results=True)
-
+# %%
 # ElasticNet
-elasticNet = ElasticNet(alpha=0.00005, l1_ratio=1, max_iter=100)
+#{'alpha': 5e-05, 'l1_ratio': 0, 'max_iter': 100000}
+elasticNet = ElasticNet(alpha=0.1, l1_ratio=0, max_iter=100000)
 elasticNetEval = evaluate_model(elasticNet, 'ElasticNet', save_results=True)
 
 '''
@@ -436,36 +485,45 @@ plt.boxplot(teste[:, :])
 plt.show()
 dataset.columns[important_columns]
 '''
-
+# %%
 # KNN Model Evaluation
-knn = KNeighborsRegressor(n_neighbors=2,
+knn = KNeighborsRegressor(n_neighbors=3,
                           metric='minkowski')
 knnEval = evaluate_model(knn, 'KNN', save_results=True)
-
+# %%
 # SVR Model Evaluation
-svr = SVR(gamma=5,
-          C=10,
+#{'C': 10, 'epsilon': 0.1, 'gamma': 1, 'kernel': 'poly'}
+svr = SVR(gamma=0.01,
+          C=50,
           epsilon=0.01,
           kernel='rbf')
 svrEval = evaluate_model(svr, 'SVR', save_results=True)
-
+# %%
+# xGB Model Evaluation
+#{'C': 10, 'epsilon': 0.1, 'gamma': 1, 'kernel': 'poly'}
+xGB = GradientBoostingRegressor(ccp_alpha=0,
+                                learning_rate=0.01,
+                                n_estimators=50)
+xGBEval = evaluate_model(xGB, 'xGB', save_results=True)
+# %%
 # Random Forest
-forest = RandomForestRegressor(n_estimators=500,
-                               criterion='mae')
+forest = RandomForestRegressor(n_estimators=200,
+                               criterion='squared_error')
 forestEval = evaluate_model(forest, 'RF', save_results=True)
-
+# %%
 # MLP Model Evaluation
-mlp = MLPRegressor(max_iter=3000,
-                   hidden_layer_sizes=(20, 15, 15, 10),
+#{'activation': 'relu', 'alpha': 0.0001, 'batch_size': 4, 'early_stopping': False, 'hidden_layer_sizes': (32, 32, 32), 'learning_rate': 'adaptive', 'learning_rate_init': 0.001, 'max_iter': 2000, 'solver': 'adam'}
+mlp = MLPRegressor(max_iter=2000,
+                   hidden_layer_sizes=(32, 32, 32),
                    activation='relu',
-                   alpha=0.001,
+                   alpha=0.0001,
                    learning_rate='adaptive',
                    learning_rate_init=0.001,
-                   batch_size=3,
+                   batch_size=4,
                    solver='adam')
 mlpEval = evaluate_model(mlp, 'MLP', save_results=True)
 
-
+# %%
 # Compile all the predictions in the same CSV file
 
 crossValIndexes = getKfoldIndexes()

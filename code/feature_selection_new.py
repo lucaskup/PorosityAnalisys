@@ -9,15 +9,20 @@ import numpy as np
 
 from correlation_matrix import plot_correlation_matrix
 
+# %%
+EXPERIMENT = 2
+EXPERIMENT_PATH = 'exp_1_effective_porosity' if EXPERIMENT == 1 else 'exp_2_total_porosity'
+DATA_FILE = 'exp_1_effective_porosity.csv' if EXPERIMENT == 1 else 'exp_2_total_porosity.csv'
+PATH_SAVE_FILES = f'../results/{EXPERIMENT_PATH}/feature_selection/'
 
 # %%
-dataset = pd.read_csv(f'../data/more_data.csv',
+dataset = pd.read_csv(f'../data/{DATA_FILE}',
                       sep=';',
                       decimal='.')
 
 
 # %%
-dataset = dataset.drop(['seq', 'place', 'file_name'], axis=1)
+dataset = dataset.drop(['seq', 'place'], axis=1)
 visual_selection = ['422.4', '486.3', '670', '970.3', '1005.4', '1412.8',
                     '1461.8', '1900.9', '1932.2', '2151.3', '2222.1', '2324.3']
 # %%
@@ -34,7 +39,7 @@ for i in range(DIVISIONS_IN_SPECTRA):
     partial_dataset = dataset[DATASET_COLUMNS[lower_index_cut:upper_index_cut] +
                               [POROSITY_COLUMN_NAME]]
 
-    filePathAndName = f'../results/featureSelection/CorrMatrix_Wav_{lower_column_name}_{upper_column_name}'
+    filePathAndName = f'{PATH_SAVE_FILES}CorrMatrix_Wav_{lower_column_name}_{upper_column_name}'
     partial_correlation_matrix = plot_correlation_matrix(partial_dataset,
                                                          annotate_cells=False,
                                                          file_name=f'{filePathAndName}.png')
@@ -44,8 +49,14 @@ for i in range(DIVISIONS_IN_SPECTRA):
     print('Best Ones:\n', corr_above_07)
     corr_above_07.to_csv(f'{filePathAndName}.csv')
 # %%
-correlation_matrix_selection = ['818.1', '940.5', '996.2',
-                                '1932.2', '2057.2', '2156.5', '2269', '2329.1']
+if EXPERIMENT == 1:
+    correlation_matrix_selection = ['853.1', '940.5', '996.2',
+                                    '1842.3', '1932.2', '2057.2', '2166.7', '2352.6']
+else:
+    correlation_matrix_selection = ['855.5', '940.5', '996.2', '1209.1', '1401.4', '1887.2',
+                                    '1932.2', '2019.8', '2197.1', '2222.1', '2234.6']
+    #correlation_matrix_selection = DATASET_COLUMNS[:-1]
+
 # %%
 selected_features_all_methods = list(
     dict.fromkeys(visual_selection + correlation_matrix_selection))
@@ -54,9 +65,12 @@ selected_features_all_methods = list(
 # %%
 feature_selected_data = dataset[['sample_name'] + selected_features_all_methods +
                                 [dataset.columns[-1]]]
-plot_correlation_matrix(feature_selected_data.drop(columns='sample_name'),
-                        file_name='../results/featureSelection/CorrMatrix_Selected_Wav_png')
+feature_selected_data = feature_selected_data.groupby(
+    by='sample_name').mean().round(4)
+# %%
+plot_correlation_matrix(feature_selected_data,
+                        file_name=f'{PATH_SAVE_FILES}CorrMatrix_Selected_Wav_png')
 print(feature_selected_data.columns)
 # %%
 feature_selected_data.to_csv(
-    '../results/featureSelection/featureSelectedData.csv')
+    f'{PATH_SAVE_FILES}feature_selected_data.csv')
