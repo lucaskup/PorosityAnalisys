@@ -12,14 +12,13 @@ from correlation_matrix import plot_correlation_matrix
 # %%
 EXPERIMENT = 2
 EXPERIMENT_PATH = 'exp_1_effective_porosity' if EXPERIMENT == 1 else 'exp_2_total_porosity'
-DATA_FILE = 'exp_1_effective_porosity.csv' if EXPERIMENT == 1 else 'exp_2_total_porosity.csv'
+DATA_FILE = 'exp_1_effective_porosity.csv' if EXPERIMENT == 1 else 'exp_2_total_porosity_reflec.csv'
 PATH_SAVE_FILES = f'../results/{EXPERIMENT_PATH}/feature_selection/'
 
 # %%
 dataset = pd.read_csv(f'../data/{DATA_FILE}',
                       sep=';',
                       decimal='.')
-
 
 # %%
 dataset = dataset.drop(['seq', 'place'], axis=1)
@@ -55,6 +54,8 @@ if EXPERIMENT == 1:
 else:
     correlation_matrix_selection = ['855.5', '940.5', '996.2', '1209.1', '1401.4', '1887.2',
                                     '1932.2', '2019.8', '2197.1', '2222.1', '2234.6']
+    correlation_matrix_selection = ['843.6', '940.5', '996.8', '1439.2', '1890.6',
+                                    '1926.6', '2019.8', '2109.9', '2222.1', '2281.1']
     #correlation_matrix_selection = DATASET_COLUMNS[:-1]
 
 # %%
@@ -65,8 +66,8 @@ selected_features_all_methods = list(
 # %%
 feature_selected_data = dataset[['sample_name'] + selected_features_all_methods +
                                 [dataset.columns[-1]]]
-feature_selected_data = feature_selected_data.groupby(
-    by='sample_name').mean().round(4)
+# feature_selected_data = feature_selected_data.groupby(
+#    by='sample_name').mean().round(4)
 # %%
 plot_correlation_matrix(feature_selected_data,
                         file_name=f'{PATH_SAVE_FILES}CorrMatrix_Selected_Wav_png')

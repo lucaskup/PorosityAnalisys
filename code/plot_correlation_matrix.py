@@ -8,7 +8,7 @@ from correlation_matrix import plot_correlation_matrix
 # %%
 EXPERIMENT = 2
 EXPERIMENT_PATH = 'exp_1_effective_porosity' if EXPERIMENT == 1 else 'exp_2_total_porosity'
-DATA_FILE = 'exp_1_effective_porosity.csv' if EXPERIMENT == 1 else 'exp_2_total_porosity.csv'
+DATA_FILE = 'exp_1_effective_porosity.csv' if EXPERIMENT == 1 else 'exp_2_total_porosity_reflec.csv'
 PATH_SAVE_FILES = f'../results/{EXPERIMENT_PATH}/feature_selection/'
 
 # %%

@@ -31,14 +31,14 @@ PATH_SAVE_FILES = f'../results/{EXPERIMENT_PATH}/model_trained/'
 dataset = pd.read_csv(DATA_FILE, index_col=0)
 dataset.describe()
 # %%
-X = dataset.values[:, :-1].astype(np.float64)
+X = dataset.values[:, 1:-1].astype(np.float64)
 #groups = dataset.values[:, 0].astype(np.str)
 Y = dataset['Porosity (%)'].values.astype(np.float64)
 # %%
 scX = StandardScaler()
 X = scX.fit_transform(X)
-#mmY = MinMaxScaler()
-# Y = mmY.fit_transform(Y.reshape(-1, 1)).ravel()
+mmY = MinMaxScaler()
+Y = mmY.fit_transform(Y.reshape(-1, 1)).ravel()
 # %%
 # Auxiliary Functions
 n_split = len(X)
@@ -316,7 +316,7 @@ def grid_search_hyperparameters(grid_parameters, model_name, model, save_results
     ])
     if save_results:
         results_df.drop('params',
-                        axis=1).to_csv(f'../results/modelTrained/{model_name}/GridSearchCV.csv',
+                        axis=1).to_csv(f'{PATH_SAVE_FILES}{model_name}/GridSearchCV.csv',
                                        decimal='.',
                                        sep=';')
 
@@ -465,7 +465,7 @@ lassoEval = evaluate_model(lasso, 'Lasso Reg', save_results=True)
 # %%
 # ElasticNet
 #{'alpha': 5e-05, 'l1_ratio': 0, 'max_iter': 100000}
-elasticNet = ElasticNet(alpha=0.1, l1_ratio=0, max_iter=100000)
+elasticNet = ElasticNet(alpha=0.01, l1_ratio=0, max_iter=10000)
 elasticNetEval = evaluate_model(elasticNet, 'ElasticNet', save_results=True)
 
 '''
@@ -487,7 +487,7 @@ dataset.columns[important_columns]
 '''
 # %%
 # KNN Model Evaluation
-knn = KNeighborsRegressor(n_neighbors=3,
+knn = KNeighborsRegressor(n_neighbors=4,
                           metric='minkowski')
 knnEval = evaluate_model(knn, 'KNN', save_results=True)
 # %%
@@ -536,7 +536,7 @@ yHatTable = np.concatenate((X[crossValIndexes], linearEval['y'], linearEval['yHa
 dfColumnsExport = wavelengthColumns + ['Y', 'Linear', 'Ridge', 'Lasso',
                                        'ElasticNet', 'kNN', 'SVR', 'RF', 'MLP']
 yHatDf = pd.DataFrame(yHatTable, columns=dfColumnsExport)
-yHatDf.to_csv('../results/modelTrained/completePredictions.csv',
+yHatDf.to_csv(f'{PATH_SAVE_FILES}completePredictions.csv',
               sep=';',
               decimal='.',
               index=False)
@@ -547,17 +547,18 @@ summaryDF = pd.DataFrame(
                         [linearEval, ridgeEval, lassoEval, elasticNetEval,
                         knnEval, svrEval, forestEval, mlpEval]))),
     columns=indexColumns)
-summaryDF.to_csv('../results/modelTrained/summary.csv',
+summaryDF.to_csv(f'{PATH_SAVE_FILES}summary.csv',
                  sep=';',
                  decimal='.',
                  index=False)
+# %%
 
 
 def plot_results():
     models = ['Linear Reg', 'Lasso Reg', 'Ridge Reg',
               'ElasticNet', 'KNN', 'SVR', 'RF', 'MLP']
     for model_name in models:
-        path_model_data = f'../results/modelTrained/{model_name}'
+        path_model_data = f'{PATH_SAVE_FILES}{model_name}'
         path_prediction_file = f'{path_model_data}/predictions.csv'
         df_prediction_data = pd.read_csv(
             path_prediction_file, decimal='.', sep=';')
