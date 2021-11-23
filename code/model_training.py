@@ -334,6 +334,9 @@ grid_search_hyperparameters(grid_parameters,
                             'Lasso Reg',
                             Lasso(),
                             save_results=True)
+# Best Lasso Reg Exp 1:
+# Params > {'alpha': 0.001, 'max_iter': 100}
+
 # Best Lasso Reg Exp 2:
 #   Score > -0.028510619749006105
 #   Params > {'alpha': 0.01, 'max_iter': 1000}
@@ -345,6 +348,8 @@ grid_search_hyperparameters(grid_parameters,
                             'Ridge Reg',
                             Ridge(),
                             save_results=True)
+# Best Ridge Reg Exp 1:
+# {'alpha': 0.1, 'max_iter': 100}
 # Best Ridge Reg Exp 2:
 #   Score > -0.028032751218368276
 #   Params > {'alpha': 0.1, 'max_iter': 100}
@@ -357,6 +362,9 @@ grid_search_hyperparameters(grid_parameters,
                             'ElasticNet',
                             ElasticNet(),
                             save_results=True)
+# Best Elastic Net Exp 1
+# Params > {'alpha': 0.001, 'l1_ratio': 0.8, 'max_iter': 100}
+
 # Best ElasticNet Exp 2:
 #   Score > -0.02851035391617089
 #   Params > {'alpha': 0.1, 'l1_ratio': 0.1, 'max_iter': 100}
@@ -377,6 +385,8 @@ grid_search_hyperparameters(grid_parameters,
                             'KNN',
                             KNeighborsRegressor(),
                             save_results=True)
+# Best KNN Exp 1:
+# Params > {'algorithm': 'auto', 'metric': 'minkowski', 'n_neighbors': 3}
 
 # Best KNN Exp 2:
 #   Score > -0.032380102023518716
@@ -392,6 +402,9 @@ grid_search_hyperparameters(grid_parameters,
                             'SVR',
                             SVR(),
                             save_results=True)
+# # Best KNN Exp 1:
+# Params > {'C': 50, 'epsilon': 0.05, 'gamma': 0.001, 'kernel': 'rbf'}
+
 # Best SVR Exp 2:
 #   Score > -0.026325756186553903
 #   Params > {'C': 1, 'epsilon': 0.01, 'gamma': 1, 'kernel': 'rbf'}
@@ -403,6 +416,10 @@ grid_search_hyperparameters(grid_parameters,
                             'RF',
                             RandomForestRegressor(),
                             save_results=True)
+# Best RF:
+#   Score > -0.01670765512438977
+#   Params > {'criterion': 'mse', 'n_estimators': 200}
+
 # Best RF Exp 2:
 #   Score > -0.02149990022206059
 #   Params > {'criterion': 'absolute_error', 'n_estimators': 500}
@@ -417,6 +434,9 @@ grid_search_hyperparameters(grid_parameters,
                             'GBoost',
                             GradientBoostingRegressor(),
                             save_results=True)
+# Best GBoost:
+#Score > -0.015958985617615475
+#Params > {'ccp_alpha': 0, 'learning_rate': 0.1, 'n_estimators': 400}
 # Best GBoost EXP 2:
 #   Score > -0.01988859338660524
 #   Params > {'ccp_alpha': 0, 'learning_rate': 0.01, 'n_estimators': 50}
@@ -455,18 +475,18 @@ linearEval = evaluate_model(linear, 'Linear Reg', save_results=True)
 # %%
 # Ridge Regression
 #{'alpha': 0.0001, 'max_iter': 100}
-ridge = Ridge(alpha=0.0001, max_iter=100)
+ridge = Ridge(alpha=0.1, max_iter=100)
 ridgeEval = evaluate_model(ridge, 'Ridge Reg', save_results=True)
 
 # %%
 # Lasso Regression
 #{'alpha': 5e-05, 'max_iter': 100}
-lasso = Lasso(alpha=0.00005, max_iter=100)
+lasso = Lasso(alpha=0.001, max_iter=100)
 lassoEval = evaluate_model(lasso, 'Lasso Reg', save_results=True)
 # %%
 # ElasticNet
 #{'alpha': 5e-05, 'l1_ratio': 0, 'max_iter': 100000}
-elasticNet = ElasticNet(alpha=0.01, l1_ratio=0, max_iter=10000)
+elasticNet = ElasticNet(alpha=0.001, l1_ratio=0.8, max_iter=100)
 elasticNetEval = evaluate_model(elasticNet, 'ElasticNet', save_results=True)
 
 '''
@@ -488,23 +508,23 @@ dataset.columns[important_columns]
 '''
 # %%
 # KNN Model Evaluation
-knn = KNeighborsRegressor(n_neighbors=4,
+knn = KNeighborsRegressor(n_neighbors=3,
                           metric='minkowski')
 knnEval = evaluate_model(knn, 'KNN', save_results=True)
 # %%
 # SVR Model Evaluation
 #{'C': 10, 'epsilon': 0.1, 'gamma': 1, 'kernel': 'poly'}
-svr = SVR(gamma=0.01,
+svr = SVR(gamma=0.001,
           C=50,
-          epsilon=0.01,
+          epsilon=0.05,
           kernel='rbf')
 svrEval = evaluate_model(svr, 'SVR', save_results=True)
 # %%
 # xGB Model Evaluation
 #{'C': 10, 'epsilon': 0.1, 'gamma': 1, 'kernel': 'poly'}
 xGB = GradientBoostingRegressor(ccp_alpha=0,
-                                learning_rate=0.01,
-                                n_estimators=50)
+                                learning_rate=0.1,
+                                n_estimators=400)
 xGBEval = evaluate_model(xGB, 'xGB', save_results=True)
 # %%
 # Random Forest

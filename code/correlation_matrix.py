@@ -20,8 +20,6 @@ def plot_correlation_matrix(df, annotate_cells=True, file_name=None):
     f, (ax, ax_lab) = plt.subplots(2, gridspec_kw=grid_kws,
                                    figsize=(10, 12))
     corr = df.corr()
-    df_columns = np.asarray(list(corr.columns))
-    ticks = list(np.linspace(0, len(df_columns)-1, 24, dtype=np.int))
     #ticks = [0, 153, 306, 459, 612, 765, 917]
     sns.heatmap(corr,
                 mask=np.zeros_like(corr, dtype=np.bool),
@@ -34,7 +32,9 @@ def plot_correlation_matrix(df, annotate_cells=True, file_name=None):
                 cbar_ax=ax_lab,
                 vmin=-1,
                 vmax=1)
+    df_columns = np.asarray(list(corr.columns))
     if len(df_columns) > 100:
+        ticks = list(np.linspace(0, len(df_columns)-1, 24, dtype=np.int))
         tick_labels = list(df_columns[ticks])
         ax.set_xticks(ticks)
         ax.set_xticklabels(tick_labels, fontsize=15)

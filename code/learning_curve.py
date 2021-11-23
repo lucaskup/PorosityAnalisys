@@ -58,10 +58,10 @@ for i in range(2, n_samples_data-1):
         Y_bootstrap_test = np.delete(Y, index_train_bootstrap, 0)
 
         elasticNet = ElasticNet(alpha=0.00025, l1_ratio=1, max_iter=100000)
-        elasticNet = SVR(gamma=0.0011,
-                         C=50,
-                         epsilon=0.05,
-                         kernel='rbf')
+        # elasticNet = SVR(gamma=0.0011,
+        #                 C=50,
+        #                 epsilon=0.05,
+        #                 kernel='rbf')
         elasticNet = elasticNet.fit(X_bootstrap_train, Y_bootstrap_train)
 
         train_predictions = mmY.inverse_transform(

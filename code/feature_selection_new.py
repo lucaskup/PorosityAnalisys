@@ -13,6 +13,7 @@ from correlation_matrix import plot_correlation_matrix
 EXPERIMENT = 1
 EXPERIMENT_PATH = 'exp_1_effective_porosity' if EXPERIMENT == 1 else 'exp_2_total_porosity'
 DATA_FILE = 'exp_1_effective_porosity.csv' if EXPERIMENT == 1 else 'exp_2_total_porosity_reflec.csv'
+DATA_FILE = 'data.csv' if EXPERIMENT == 1 else 'exp_2_total_porosity_reflec.csv'
 PATH_SAVE_FILES = f'../results/{EXPERIMENT_PATH}/feature_selection/'
 
 # %%
@@ -30,19 +31,21 @@ DATASET_COLUMNS = list(dataset.columns[1:])
 DATASET_COLUMNS = DATASET_COLUMNS[50:-51] + [POROSITY_COLUMN_NAME]
 DIVISIONS_IN_SPECTRA = 20
 WAVELENGTHS_PER_DIVISION = len(DATASET_COLUMNS) // DIVISIONS_IN_SPECTRA
+# %%
 for i in range(DIVISIONS_IN_SPECTRA):
     lower_index_cut = i * WAVELENGTHS_PER_DIVISION
     lower_column_name = DATASET_COLUMNS[lower_index_cut]
     upper_index_cut = lower_index_cut + WAVELENGTHS_PER_DIVISION - 1
     upper_column_name = DATASET_COLUMNS[upper_index_cut]
     partial_dataset = dataset[DATASET_COLUMNS[lower_index_cut:upper_index_cut] +
-                              [POROSITY_COLUMN_NAME]]
+                              [POROSITY_COLUMN_NAME]].astype(float)
 
     filePathAndName = f'{PATH_SAVE_FILES}CorrMatrix_Wav_{lower_column_name}_{upper_column_name}'
     partial_correlation_matrix = plot_correlation_matrix(partial_dataset,
                                                          annotate_cells=False,
                                                          file_name=f'{filePathAndName}.png')
 
+    # print(partial_correlation_matrix)
     corr_above_07 = partial_correlation_matrix[partial_correlation_matrix[POROSITY_COLUMN_NAME
                                                                           ].abs() > 0.45][POROSITY_COLUMN_NAME]
     print('Best Ones:\n', corr_above_07)
