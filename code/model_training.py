@@ -22,13 +22,14 @@ import matplotlib as mpl
 mpl.rcParams['figure.dpi'] = 400
 
 # %%
-EXPERIMENT = 2
+EXPERIMENT = 1
 EXPERIMENT_PATH = 'exp_1_effective_porosity' if EXPERIMENT == 1 else 'exp_2_total_porosity'
 DATA_FILE = f'../results/{EXPERIMENT_PATH}/feature_selection/feature_selected_data.csv'
 PATH_SAVE_FILES = f'../results/{EXPERIMENT_PATH}/model_trained/'
 # %%
 # Import the data
 dataset = pd.read_csv(DATA_FILE, index_col=0)
+dataset = dataset.groupby(by='sample_name').mean()
 dataset.describe()
 # %%
 X = dataset.values[:, 1:-1].astype(np.float64)
