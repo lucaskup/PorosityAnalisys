@@ -42,7 +42,7 @@ n_samples_data = len(X)
 indices = np.arange(start=0, stop=n_samples_data).reshape(-1, 1)
 X_ = np.concatenate([indices, X], axis=1)
 results = []
-for i in range(2, n_samples_data-1):
+for i in range(2, n_samples_data):
     bootstrap_samples = min(1000, int(comb(n_samples_data, i)))
     print(
         f'Experiment:\n Train Size: {i}\n Bootstrap Samples: {bootstrap_samples}')
@@ -57,7 +57,7 @@ for i in range(2, n_samples_data-1):
         X_bootstrap_test = np.delete(X, index_train_bootstrap, 0)
         Y_bootstrap_test = np.delete(Y, index_train_bootstrap, 0)
 
-        elasticNet = ElasticNet(alpha=0.00025, l1_ratio=1, max_iter=100000)
+        elasticNet = ElasticNet(alpha=0.001, l1_ratio=1, max_iter=1000)
         # elasticNet = SVR(gamma=0.0011,
         #                 C=50,
         #                 epsilon=0.05,
