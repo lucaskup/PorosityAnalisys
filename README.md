@@ -30,7 +30,7 @@ This repository provides the code, data and the results used to estimate the por
     
 ## How to cite
 
-Yet to be published. Manuscript submited to the International Journal of Remote Sensing.
+Yet to be published. Manuscript submited to the Australian Journal of Earth Sciences.
 
 ## Credits
 This work is credited to the [Vizlab | X-Reality and GeoInformatics Lab](http://www.vizlab.unisinos.br/) and the following authors and developers: [Lucas Silveira Kupssinskü](https://www.researchgate.net/profile/Lucas_Kupssinskue).
