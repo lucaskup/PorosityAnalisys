@@ -9,6 +9,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from scipy.stats import pearsonr
 from pathlib import Path
+import matplotlib as mpl
+mpl.rcParams['figure.dpi'] = 400
 
 # %%
 EXPERIMENT = 1
