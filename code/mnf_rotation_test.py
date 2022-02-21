@@ -6,6 +6,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+from pysptools.noise import MNF, Whiten
+
+from spectral import calc_stats, noise_from_diffs, mnf
 
 from correlation_matrix import plot_correlation_matrix
 
@@ -17,10 +20,32 @@ DATA_FILE = 'data.csv' if EXPERIMENT == 1 else 'exp_2_total_porosity_reflec.csv'
 PATH_SAVE_FILES = f'../results/{EXPERIMENT_PATH}/feature_selection/'
 
 # %%
-dataset = pd.read_csv(f'../data/{DATA_FILE}',
+dataset = pd.read_csv(f'../data/exp_1_effective_porosity_reflectance.csv',
                       sep=';',
                       decimal='.')
 
+# %%
+hsi_cube = dataset.values
+hsi_cube = hsi_cube[:, 4:-1]
+hsi_cube = hsi_cube.astype(np.float32)
+# %%
+hsi_cube = hsi_cube.reshape(235, 1018)
+hsi_cube_to_process = np.ones((235, 235, 1018))
+for i in range(235):
+    hsi_cube_to_process[i, :, :] = hsi_cube
+#hsi_cube_1 = hsi_cube[0,:,:,:]
+# %%
+proc = MNF()
+mnf_processed = proc.apply(hsi_cube_to_process)
+# %%
+mnf_spectra = mnf_processed[0, :, :]
+np.savetxt('teste0402.csv', mnf_spectra, delimiter=';', fmt='%10.5f')
+
+# %%
+inverse_transformed_spectra = proc.inverse_transform(mnf_processed)
+# %%
+wt = Whiten()
+wt.apply(hsi_cube_to_process)
 # %%
 dataset = dataset.drop(['seq', 'place'], axis=1)
 visual_selection = ['422.4', '486.3', '670', '970.3', '1005.4', '1412.8',
@@ -69,8 +94,8 @@ selected_features_all_methods = list(
 # %%
 feature_selected_data = dataset[['sample_name'] + selected_features_all_methods +
                                 [dataset.columns[-1]]]
-feature_selected_data = feature_selected_data.groupby(
-    by='sample_name').mean().round(4)
+# feature_selected_data = feature_selected_data.groupby(
+#    by='sample_name').mean().round(4)
 # %%
 plot_correlation_matrix(feature_selected_data,
                         file_name=f'{PATH_SAVE_FILES}CorrMatrix_Selected_Wav_png')

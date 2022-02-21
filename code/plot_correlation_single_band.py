@@ -52,6 +52,8 @@ def create_graphs(reflectance_value,
     plt.clf()
     plt.style.use(['seaborn-ticks'])
     plt.figure(figsize=(6.5, 4.1))  # 4.75))
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
 
     # Plots the estimatives
     plt.plot(reflectance_value, porosity_value, "o")
@@ -64,8 +66,9 @@ def create_graphs(reflectance_value,
 
     r, _ = pearsonr(reflectance_value.flatten(), porosity_value.flatten())
     plt.grid(True)
-    plt.ylabel('Laboratory Determined Porosity [%]')
-    plt.xlabel(f'Normalized Reflectance {wavelength_name}nm - r:  {r:7.4f}')
+    plt.ylabel('Porosity [%]', fontsize=18)
+    plt.xlabel(
+        f'Norm. Reflectance {wavelength_name}nm - r:  {r:7.4f}', fontsize=18)
     if save_evaluation:
 
         # Save Graph
@@ -76,7 +79,7 @@ def create_graphs(reflectance_value,
 
 
 # %%
-for wavelength in DATASET_COLUMNS[1:-1]:
+for wavelength in DATASET_COLUMNS[0:-1]:
     print(wavelength)
     create_graphs(dataset_mean[wavelength].values.reshape(-1, 1),
                   dataset_mean[POROSITY_COLUMN_NAME].values.reshape(-1, 1),
