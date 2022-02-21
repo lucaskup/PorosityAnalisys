@@ -1,14 +1,15 @@
 # %%
+# Script used to train the models that appear in the paper
+
 import seaborn as sns
 from pathlib import Path
 import pandas as pd
 import numpy as np
 import copy
 from scipy.stats import t
-from sklearn.model_selection import cross_validate, KFold, GridSearchCV, GroupKFold, RepeatedKFold
+from sklearn.model_selection import cross_validate, KFold, GridSearchCV, RepeatedKFold
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import StandardScaler
-from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.neighbors import KNeighborsRegressor

@@ -1,4 +1,5 @@
 # %%
+# Script used to create supplementary material - appendix A
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np

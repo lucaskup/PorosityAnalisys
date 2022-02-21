@@ -1,4 +1,6 @@
 # %%
+# Script used to create the learning curve, Figure 8 in the paper
+
 from scipy.special import comb
 from pathlib import Path
 import pandas as pd
