@@ -4,7 +4,6 @@ This repository provides the code, data and the results used to estimate the por
 # Table of contents 
 
 - [Requirements](#requirements) 
-- [Usage](#usage) 
 - [How to cite](#how-to-cite) 
 - [Credits](#credits) 
 - [License](#license) 
@@ -37,7 +36,30 @@ This repository provides the code, data and the results used to estimate the por
     
 ## How to cite
 
-Yet to be published. Manuscript accepted in the Australian Journal of Earth Sciences.
+If you find our work useful in your research please consider citing [our paper](https://doi.org/10.1080/08120099.2022.2046636):
+
+Kupssinskü, L., Guimarães, T., Cardoso, M., Bachi, L., Zanotta, D., Estilon de Souza, I., … Gonzaga, L. (2022). Hyperspectral Data as a Proxy for Porosity Estimation of Carbonate Rocks. Australian Journal of Earth Sciences. doi:10.1080/08120099.2022.2046636
+
+```
+@article{kupssinsku_AJES_2022,
+  author = {Kupssinskü, Lucas and 
+            Guimarães, Taina and 
+            Cardoso, Milena and 
+            Bachi, Leonardo and 
+            Zanotta, Daniel and 
+            Estilon de Souza, Italos and 
+            Falcao, Alexandre and 
+            Velloso, Raquel and 
+            Cazarin, Caroline and 
+            Veronez, Maurício and 
+            Gonzaga Jr, Luiz},
+  title = {Hyperspectral Data as a Proxy for Porosity 
+           Estimation of Carbonate Rocks},
+  journal = {Australian Journal of Earth Sciences},
+  year = {2022},
+  doi = {10.1080/08120099.2022.2046636}
+}
+```
 
 ## Credits
 This work is credited to the [Vizlab | X-Reality and GeoInformatics Lab](http://www.vizlab.unisinos.br/) and the following authors and developers: [Lucas Silveira Kupssinskü](https://www.researchgate.net/profile/Lucas_Kupssinskue).
